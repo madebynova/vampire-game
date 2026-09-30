@@ -1,0 +1,55 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/npc/human_npc.gd" id="1_npc"]
+[ext_resource type="Script" path="res://scripts/visual/humanoid_model.gd" id="2_model"]
+[ext_resource type="Script" path="res://scripts/abilities/sense_target.gd" id="3_sense"]
+[ext_resource type="Script" path="res://scripts/npc/npc_interactable.gd" id="4_inter"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.35
+height = 1.8
+
+[node name="HumanNpc" type="CharacterBody3D"]
+script = ExtResource("1_npc")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_body")
+
+[node name="Model" type="Node3D" parent="."]
+script = ExtResource("2_model")
+
+[node name="AlertLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, 0)
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.25, 0.2, 1)
+outline_modulate = Color(0, 0, 0, 1)
+text = ""
+font_size = 96
+outline_size = 12
+pixel_size = 0.006
+
+[node name="SpeechLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.55, 0)
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.95, 0.85, 1)
+outline_modulate = Color(0, 0, 0, 1)
+text = ""
+font_size = 36
+outline_size = 8
+pixel_size = 0.0045
+autowrap_mode = 3
+width = 700.0
+
+[node name="SenseTarget" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+script = ExtResource("3_sense")
+label_offset = Vector3(0, 1.9, 0)
+heartbeat_audio = true
+
+[node name="Interactable" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+script = ExtResource("4_inter")
+interact_range = 2.4

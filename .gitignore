@@ -1,0 +1,38 @@
+# Godot 4+ generated
+.godot/
+/android/
+
+# Exports / build output
+/build/
+/export/
+*.apk
+*.aab
+*.exe
+*.pck
+*.zip
+
+# Editor / OS junk
+.mono/
+*.translation
+export_credentials.cfg
+export_presets.cfg.bak
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+*~
+
+# Local test output (screenshots etc.)
+/tests/out/
+
+# Secrets - never commit
+.env
+*.key
+*.pem
+secrets*

@@ -1,0 +1,50 @@
+class_name FormData
+extends Resource
+## Data-driven description of one player form (Human, Vampire, later Wolf/Bat...).
+## Everything that differs between forms lives here, not in player code.
+
+@export var id: StringName = &"human"
+@export var display_name := "Human"
+@export var tagline := ""
+
+@export_group("Movement")
+@export var walk_speed := 3.0
+@export var run_speed := 5.5
+@export var jump_velocity := 6.0
+@export var acceleration := 14.0
+
+@export_group("Rules")
+@export var sun_vulnerable := false
+@export var frightens_humans := false
+@export var can_feed := false
+## Ability ids (Ability.ability_id) this form is allowed to use.
+@export var abilities: PackedStringArray = PackedStringArray()
+@export var blood_drain_per_sec := 0.0
+@export var regen_per_sec := 0.0
+## Blood spent per point of health regenerated.
+@export var regen_blood_cost := 0.0
+
+@export_group("Look")
+@export var skin_color := Color(0.85, 0.66, 0.55)
+@export var cloth_color := Color(0.45, 0.35, 0.25)
+@export var pants_color := Color(0.25, 0.25, 0.3)
+@export var hair_color := Color(0.2, 0.13, 0.08)
+@export var eye_color := Color(0.12, 0.08, 0.05)
+@export var eye_glow := 0.0
+@export var show_cloak := false
+@export var show_fangs := false
+@export var aura_energy := 0.0
+@export var aura_color := Color(0.8, 0.05, 0.1)
+@export var hud_color := Color(0.9, 0.85, 0.75)
+
+@export_group("Camera and vision")
+@export var fov := 70.0
+@export var ambient_energy := 0.3
+@export var ambient_color := Color(0.55, 0.6, 0.75)
+@export var saturation := 1.0
+@export var brightness := 1.0
+@export var contrast := 1.0
+
+
+func allows_ability(ability_id: StringName) -> bool:
+	return abilities.has(String(ability_id))

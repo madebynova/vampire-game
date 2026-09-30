@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="FormData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/form_data.gd" id="1_form"]
+
+[resource]
+script = ExtResource("1_form")
+id = &"vampire"
+display_name = "Vampire"
+tagline = "Fast. Hungry. Sees what the living cannot. The sun is your enemy."
+walk_speed = 4.2
+run_speed = 9.0
+jump_velocity = 9.0
+acceleration = 26.0
+sun_vulnerable = true
+frightens_humans = true
+can_feed = true
+abilities = PackedStringArray("vampiric_sense")
+blood_drain_per_sec = 0.35
+regen_per_sec = 4.0
+regen_blood_cost = 0.5
+skin_color = Color(0.66, 0.68, 0.8, 1)
+cloth_color = Color(0.09, 0.03, 0.05, 1)
+pants_color = Color(0.05, 0.04, 0.06, 1)
+hair_color = Color(0.03, 0.02, 0.03, 1)
+eye_color = Color(1, 0.08, 0.05, 1)
+eye_glow = 8.0
+show_cloak = true
+show_fangs = true
+aura_energy = 0.8
+aura_color = Color(0.85, 0.05, 0.12, 1)
+hud_color = Color(0.95, 0.15, 0.2, 1)
+fov = 80.0
+ambient_energy = 0.75
+ambient_color = Color(0.5, 0.6, 0.95, 1)
+saturation = 0.72
+brightness = 1.05
+contrast = 1.12

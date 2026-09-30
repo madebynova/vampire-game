@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="NpcProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_profile.gd" id="1_prof"]
+
+[resource]
+script = ExtResource("1_prof")
+display_name = "Tomas Reeve"
+occupation = "Groundskeeper"
+greeting_lines = PackedStringArray("Evening, stranger. Mind the road - it's a long way to anywhere.", "The Blackthorn house? Shuttered for years. Best leave it be.", "Folk say the old place isn't empty. I keep the grounds. I don't go inside.")
+skin_color = Color(0.8, 0.62, 0.5, 1)
+cloth_color = Color(0.3, 0.38, 0.24, 1)
+pants_color = Color(0.3, 0.24, 0.18, 1)
+hair_color = Color(0.55, 0.55, 0.55, 1)
+base_heart_rate = 66.0
+blood_description = "Aged and smoky. Pipe tobacco, cold rain, old habit."
+blood_yield = 45.0
+memory_title = "The Well, Before Dawn"
+memory_text = "Rain on shoulders that are not yours. A heavy iron key, cold in a shaking hand. You kneel by the well and bury it beneath the flagstone.\n\n'Not even the Lord's guests should find the cellar.'"
+facts = PackedStringArray("Tomas Reeve keeps the Blackthorn grounds.", "He is afraid of something beneath the house.", "He buried the cellar key under the well.")
+reveals_secret = &"well_key"
