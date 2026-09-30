@@ -54,6 +54,7 @@ func build() -> void:
 	_trees()
 	_graveyard()
 	_boundary()
+	_lamps()
 	_actors()
 
 
@@ -215,6 +216,21 @@ func _graveyard() -> void:
 	# A tall cross casts a long thin shadow.
 	Greybox.box(self, Vector3(20.5, 1.4, 0.0), Vector3(0.3, 2.8, 0.3), STONE, Greybox.WORLD, "Cross")
 	Greybox.box(self, Vector3(20.5, 2.1, 0.0), Vector3(1.3, 0.3, 0.3), STONE, Greybox.WORLD, "Cross")
+
+
+# ---------------------------------------------------------------- lamps
+
+func _lamps() -> void:
+	for pos in location.lamp_positions:
+		Greybox.cylinder(self, pos + Vector3(0, 1.2, 0), 0.07, 2.4, DARK_WOOD)
+		Greybox.box(self, pos + Vector3(0, 2.5, 0), Vector3(0.28, 0.32, 0.28), Color(1.0, 0.75, 0.4), Greybox.SUN_ONLY, "LampHead").get_child(0).material_override = Greybox.material(Color(1.0, 0.75, 0.4), 1.4)
+		var light := NightLight.new()
+		light.position = pos + Vector3(0, 2.4, 0)
+		light.night_energy = 1.6
+		light.omni_range = 9.0
+		light.light_color = Color(1.0, 0.72, 0.4)
+		light.shadow_enabled = false
+		add_child(light)
 
 
 # ---------------------------------------------------------------- actors

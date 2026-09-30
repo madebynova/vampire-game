@@ -123,6 +123,9 @@ func _build_all() -> void:
 	_streams[&"deny"] = _to_wav(_deny())
 	_streams[&"secret"] = _to_wav(_chime())
 	_streams[&"wind_loop"] = _to_wav(_wind_loop(), true)
+	_streams[&"crickets_loop"] = _to_wav(_crickets_loop(), true)
+	_streams[&"birds_loop"] = _to_wav(_birds_loop(), true)
+	_streams[&"bell"] = _to_wav(_bell())
 
 
 func _to_wav(samples: PackedFloat32Array, looped := false) -> AudioStreamWAV:
@@ -404,4 +407,46 @@ func _wind_loop() -> PackedFloat32Array:
 		lp += (_noise() - lp) * 0.02
 		b[i] = lp * (0.6 + 0.4 * sin(TAU * 0.5 * t)) * 1.6
 	_edge_fade(b, 0.05)
+	return b
+
+
+func _crickets_loop() -> PackedFloat32Array:
+	var b := _buf(3.0)
+	for i in b.size():
+		var t := float(i) / RATE
+		var s := 0.0
+		for voice in [[4300.0, 0.0, 0.75], [4750.0, 0.31, 0.9]]:
+			var tt := fposmod(t - voice[1], voice[2])
+			# Three quick chirps, then silence, repeating (period divides the loop length).
+			var burst := 0.0
+			if tt < 0.36:
+				var local := fposmod(tt, 0.12)
+				burst = sin(PI * local / 0.12) if local < 0.12 else 0.0
+			s += sin(TAU * voice[0] * t) * burst * 0.5
+		b[i] = s * 0.35
+	return b
+
+
+func _birds_loop() -> PackedFloat32Array:
+	var b := _buf(6.0)
+	var tweets := [[0.4, 3000.0], [0.62, 3500.0], [1.9, 2600.0], [2.05, 3100.0], [2.2, 3600.0], [3.6, 2900.0], [4.3, 3300.0], [4.48, 3800.0], [5.0, 2700.0]]
+	for tw in tweets:
+		var start := int(tw[0] * RATE)
+		var n := int(0.14 * RATE)
+		var ph := 0.0
+		for j in n:
+			var k := float(j) / n
+			ph += TAU * (float(tw[1]) * (1.0 + 0.35 * sin(PI * k) + 0.05 * sin(k * 90.0))) / RATE
+			b[start + j] += sin(ph) * sin(PI * k) * 0.22
+	return b
+
+
+func _bell() -> PackedFloat32Array:
+	var b := _buf(3.2)
+	for i in b.size():
+		var t := float(i) / RATE
+		var s := 0.0
+		for part in [[1.0, 1.0, 1.1], [2.0, 0.6, 1.6], [2.76, 0.5, 2.2], [5.4, 0.3, 3.5], [8.93, 0.15, 5.0]]:
+			s += sin(TAU * 196.0 * part[0] * t) * part[1] * exp(-t * part[2])
+		b[i] = s * clampf(t * 300.0, 0.0, 1.0) * 0.32
 	return b

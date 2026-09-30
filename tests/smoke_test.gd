@@ -23,6 +23,11 @@ func _ready() -> void:
 	add_child(main)
 	player = main.player
 	world = main.world
+	# Deterministic clock: paused at 16:00 unless a test moves it.
+	main.tod.paused = true
+	main.tod.set_hour(16.0)
+	# Pin the sun to the direction the Task 1 layout/tests were tuned for (north-north-east, 24 deg).
+	main.tod.sun_override = Vector3(0.312, 0.407, -0.858)
 	player.abilities.ability_denied.connect(func(_a, reason): _denied_reasons.append(reason))
 	player.sunlight.stage_changed.connect(func(s, _o): _stages_seen.append(int(s)))
 	await _run()
@@ -356,7 +361,7 @@ func _run() -> void:
 	_place(Vector3(-4.0, 0, -11.0), -60.0)
 	_face(world.coffin.global_position)
 	await _wait(0.4)
-	_check(_prompt().begins_with("Rest"), "Coffin prompt: %s" % _prompt())
+	_check(_prompt().begins_with("Sleep"), "Coffin prompt: %s" % _prompt())
 	await _tap(&"interact")
 	await _wait(4.5)
 	_check(player.state.mode == PlayerState.Mode.NORMAL, "control returns after resting")

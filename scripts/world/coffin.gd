@@ -10,6 +10,8 @@ const CLOTH := Color(0.55, 0.05, 0.1)
 
 @export var spawn_yaw_degrees := -90.0
 @export var min_blood_after_rest := 40.0
+## Sleeping in the coffin skips ahead to this hour (the next dusk).
+@export var dusk_hour := 19.0
 
 @onready var spawn: Marker3D = $SpawnPoint
 @onready var interactable: Interactable = $Interactable
@@ -20,7 +22,7 @@ var _candle_lights: Array[OmniLight3D] = []
 
 func _ready() -> void:
 	add_to_group(&"coffins")
-	interactable.prompt_text = "Rest in your coffin (end the night)"
+	interactable.prompt_text = "Sleep in your coffin until dusk"
 	interactable.interacted.connect(func(actor: Player): wake(actor, &"rest"))
 	_build_visuals()
 
@@ -101,6 +103,10 @@ func wake(player: Player, kind: StringName) -> void:
 		Sfx.play(&"coffin", -2.0)
 		await get_tree().create_timer(1.3).timeout
 
+	if kind == &"rest":
+		var tod := get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay
+		if tod:
+			tod.skip_to(dusk_hour)
 	player.abilities.deactivate_all()
 	player.form.set_form_immediate(&"human")
 	player.health.revive(0.55 if kind == &"death" else 1.0)
@@ -120,7 +126,7 @@ func wake(player: Player, kind: StringName) -> void:
 			&"start":
 				hud.toast("You wake in your coffin. Press H for controls.", Color(0.9, 0.8, 0.8), 6.0)
 			&"rest":
-				hud.toast("A night passes. The living have forgotten you.", Color(0.8, 0.8, 0.95), 4.5)
+				hud.toast("You sleep until dusk. The living have forgotten you.", Color(0.8, 0.8, 0.95), 4.5)
 			&"death":
 				hud.toast("You wake in your coffin, weaker than before.", Color(0.95, 0.5, 0.5), 5.0)
 	_busy = false

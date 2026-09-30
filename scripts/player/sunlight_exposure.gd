@@ -39,13 +39,25 @@ func _on_setup() -> void:
 	player.health.died.connect(func(_c): reset())
 
 
+var _tod: TimeOfDay
+
+
 ## Direction pointing FROM the ground TOWARD the sun.
 func to_sun() -> Vector3:
+	if _tod == null:
+		_tod = get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay
+	if _tod != null:
+		return _tod.sun_direction()
 	if sun == null:
 		sun = get_tree().get_first_node_in_group(&"sun") as DirectionalLight3D
-	if sun == null:
-		return Vector3.UP
-	return sun.global_transform.basis.z.normalized()
+	return sun.global_transform.basis.z.normalized() if sun else Vector3.UP
+
+
+## 0..1: how hard the sun is shining right now (0 at night, 1 by mid-morning).
+func sun_intensity() -> float:
+	if _tod == null:
+		_tod = get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay
+	return _tod.sun_strength() if _tod != null else 1.0
 
 
 func is_vulnerable() -> bool:
@@ -54,7 +66,7 @@ func is_vulnerable() -> bool:
 
 
 func _physics_process(delta: float) -> void:
-	exposure = _sample_exposure()
+	exposure = _sample_exposure() * sun_intensity()
 	_smoothed = move_toward(_smoothed, exposure, delta * 8.0)
 	var in_sun := _smoothed > 0.05
 

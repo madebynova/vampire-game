@@ -24,6 +24,8 @@ var _toast_tween: Tween
 var _banner: Label
 var _help: Label
 var _debug: Label
+var _clock: Label
+var _tod: TimeOfDay
 var _memory_panel: PanelContainer
 var _memory_title: Label
 var _memory_body: Label
@@ -161,9 +163,16 @@ func _build() -> void:
 	_help.position = Vector2(22, -130)
 	_root.add_child(_help)
 
+	_clock = _label("", 22, Color(0.95, 0.9, 0.8))
+	_clock.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_clock.position = Vector2(-250, 14)
+	_clock.custom_minimum_size = Vector2(230, 0)
+	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_root.add_child(_clock)
+
 	_debug = _label("", 14, Color(0.7, 1.0, 0.7))
 	_debug.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_debug.position = Vector2(-330, 14)
+	_debug.position = Vector2(-330, 80)
 	_debug.visible = false
 	_root.add_child(_debug)
 
@@ -295,6 +304,7 @@ func _process(delta: float) -> void:
 		_debug.visible = not _debug.visible
 	_update_prompt()
 	_update_sun()
+	_update_clock()
 	if _memory_panel.visible:
 		_memory_age += delta
 		_memory_time -= delta
@@ -302,6 +312,23 @@ func _process(delta: float) -> void:
 			_memory_panel.visible = false
 	if _debug.visible:
 		_update_debug()
+
+
+func _update_clock() -> void:
+	if _tod == null:
+		_tod = get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay
+		if _tod == null:
+			return
+	var phase := String(_tod.phase()).capitalize()
+	var extra := ""
+	if player.form.current.sun_vulnerable and (_tod.phase() == TimeOfDay.NIGHT or _tod.phase() == TimeOfDay.DAWN):
+		var secs := int(_tod.real_seconds_until(_tod.sunrise_hour()))
+		if _tod.hour < _tod.sunrise_hour() or _tod.hour > 12.0:
+			extra = "
+Sunrise in %d:%02d" % [secs / 60, secs % 60]
+	_clock.text = "Day %d   %s   %s%s" % [_tod.day_count + 1, _tod.clock_text(), phase, extra]
+	var c := Color(1.0, 0.85, 0.6) if _tod.phase() != TimeOfDay.NIGHT else Color(0.7, 0.78, 1.0)
+	_clock.add_theme_color_override(&"font_color", c)
 
 
 func _update_prompt() -> void:

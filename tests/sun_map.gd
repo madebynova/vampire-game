@@ -1,17 +1,23 @@
 extends Node
 ## Dev tool: prints an ASCII map of sunlight (using the same rays as SunlightExposure).
 ##   '#' solid   '.' full sun   ':' partial   ' ' shade   'C' coffin  'T' Tomas  'E' Elise  'W' well
-## Run: godot --headless --path . res://tests/sun_map.tscn
+## Run: godot --headless --path . res://tests/sun_map.tscn -- <hour, default 16>
 
 func _ready() -> void:
 	var main: Node3D = load("res://scenes/main.tscn").instantiate()
 	main.capture_mouse = false
 	add_child(main)
+	var hour := 16.0
+	var args := OS.get_cmdline_user_args()
+	if args.size() > 0:
+		hour = float(args[0])
+	main.tod.paused = true
+	main.tod.set_hour(hour)
 	for i in 4:
 		await get_tree().physics_frame
 	var space := main.get_world_3d().direct_space_state
-	var sun := get_tree().get_first_node_in_group(&"sun") as DirectionalLight3D
-	var to_sun := sun.global_transform.basis.z.normalized()
+	var to_sun: Vector3 = main.tod.sun_direction()
+	print("hour %.1f  elevation %.1f deg" % [hour, main.tod.sun_elevation_degrees()])
 	print("to_sun = ", to_sun)
 	var world: WorldBuilder = main.get_node("World")
 	var marks := {

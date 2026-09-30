@@ -3,7 +3,6 @@ extends Node3D
 ## Scene glue. Owns no gameplay rules: it wires player events to presentation
 ## (screen effects, vision, HUD) and handles death -> coffin.
 
-@export var sun_rotation_degrees := Vector3(-24.0, 160.0, 0.0)
 @export var capture_mouse := true
 
 @onready var player: Player = $Player
@@ -12,13 +11,18 @@ extends Node3D
 @onready var screen_fx: ScreenFX = $ScreenFX
 @onready var atmosphere: WorldAtmosphere = $WorldEnvironment
 @onready var sun: DirectionalLight3D = $Sun
+@onready var moon: DirectionalLight3D = $Moon
+@onready var tod: TimeOfDay = $TimeOfDay
 
 
 func _ready() -> void:
-	sun.rotation_degrees = sun_rotation_degrees
+	atmosphere.setup(tod, sun, moon)
+	atmosphere.set_vision(player.form.current, 0.0)
 	hud.bind(player)
 	_bind_presentation()
-	Sfx.start_loop(&"wind_loop", -22.0)
+	Sfx.start_loop(&"wind_loop", -24.0)
+	Sfx.start_loop(&"crickets_loop", -80.0)
+	Sfx.start_loop(&"birds_loop", -80.0)
 	screen_fx.set_fade(1.0)
 	if capture_mouse:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -40,6 +44,27 @@ func _bind_presentation() -> void:
 	player.feeding.feed_interrupted.connect(func(_n, _p): screen_fx.feed_target = 0.0)
 	player.health.damaged.connect(func(amount: float, _s): screen_fx.hurt_pulse(clampf(0.1 + amount * 0.05, 0.1, 0.5)))
 	player.health.died.connect(_on_player_died)
+	tod.phase_changed.connect(_on_phase_changed)
+	tod.hour_changed.connect(_on_hour_changed)
+
+
+func _on_phase_changed(new_phase: StringName, _old: StringName) -> void:
+	match new_phase:
+		TimeOfDay.DUSK:
+			hud.toast("The sun sinks. Dusk.", Color(1.0, 0.7, 0.5), 4.0)
+			Sfx.play(&"bell", -6.0)
+		TimeOfDay.NIGHT:
+			hud.toast("Night falls. The world is yours - and theirs.", Color(0.7, 0.75, 1.0), 4.5)
+		TimeOfDay.DAWN:
+			hud.toast("The sky pales. Dawn is here.", Color(1.0, 0.75, 0.55), 4.0)
+		TimeOfDay.DAY:
+			hud.toast("The sun is up.", Color(1.0, 0.9, 0.7), 3.0)
+
+
+func _on_hour_changed(h: int) -> void:
+	if h == 5 and player.form.current.sun_vulnerable:
+		hud.toast("Less than an hour until sunrise. Find shelter.", Color(1.0, 0.6, 0.4), 5.0)
+		Sfx.play(&"bell", -4.0, 0.8)
 
 
 func _on_player_died(_cause: StringName) -> void:
@@ -51,6 +76,11 @@ func _on_player_died(_cause: StringName) -> void:
 
 
 func _process(_delta: float) -> void:
+	# Ambience follows the time of day: crickets at night, birds in daylight.
+	var night := tod.darkness()
+	var day := clampf(tod.sun_strength() * 1.4, 0.0, 1.0)
+	Sfx.set_loop_volume(&"crickets_loop", linear_to_db(maxf(night * 0.5, 0.0001)))
+	Sfx.set_loop_volume(&"birds_loop", linear_to_db(maxf(day * 0.35, 0.0001)))
 	var s := player.sunlight
 	var glare := s.burn_ratio() * 0.9
 	if s.stage != SunlightExposure.Stage.SAFE and s.exposure > 0.05:
