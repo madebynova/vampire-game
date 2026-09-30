@@ -6,6 +6,7 @@ uniform sampler2D screen_tex : hint_screen_texture, repeat_disable, filter_linea
 uniform float sun_strength = 0.0;
 uniform float sense_strength = 0.0;
 uniform float feed_strength = 0.0;
+uniform float memory_strength = 0.0;
 uniform float hurt_strength = 0.0;
 uniform float flash_strength = 0.0;
 uniform vec4 flash_color : source_color = vec4(1.0);
@@ -32,6 +33,10 @@ void fragment() {
 	float beat = pow(max(0.0, sin(TIME * 7.5)), 6.0);
 	col = mix(col, vec3(lum) * vec3(0.95, 0.15, 0.15), feed_strength * 0.5);
 	col = mix(col, vec3(0.32, 0.0, 0.02), clamp(feed_strength * vig * (1.1 + beat * 0.5), 0.0, 1.0));
+
+	// Blood memory: a faded, sepia flashback with dark edges.
+	col = mix(col, vec3(lum) * vec3(1.18, 0.95, 0.72), memory_strength * 0.75);
+	col = mix(col, col * vec3(0.4, 0.28, 0.22), memory_strength * vig * 0.9);
 
 	// Sunlight: bleaching glare that grows from the edges.
 	vec3 glare = vec3(1.0, 0.8, 0.5);

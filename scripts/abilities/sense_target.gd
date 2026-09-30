@@ -10,7 +10,7 @@ const OVERLAY_SHADER := preload("res://shaders/sense_overlay.gdshader")
 @export var kind: StringName = &"living"
 @export var sense_color := Color(0.9, 0.05, 0.1)
 @export var max_range := 40.0
-@export var label_range := 13.0
+@export var label_range := 22.0
 @export var label_offset := Vector3(0, 0.9, 0)
 @export var heartbeat_audio := false
 
@@ -72,6 +72,7 @@ func apply(shown: bool, strength: float, listener_pos: Vector3 = Vector3.ZERO) -
 	_mat.set_shader_parameter(&"intensity", 0.4 + 0.6 * strength)
 	_mat.set_shader_parameter(&"beat_hz", hz)
 
+	_label.position = data.get("label_offset", label_offset)
 	var text: String = data.get("label", "")
 	_label.visible = text != "" and dist <= label_range
 	if _label.visible and text != _last_label:

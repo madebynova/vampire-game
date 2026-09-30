@@ -46,14 +46,15 @@ func start(npc: HumanNpc) -> void:
 	var away := player.global_position - npc.global_position
 	away.y = 0.0
 	away = away.normalized() if away.length() > 0.05 else Vector3.BACK
-	var stand := npc.global_position + away * 0.85
+	var lying := npc.is_lying()
+	var stand := npc.global_position + away * (1.15 if lying else 0.85)
 	create_tween().tween_property(player, "global_position", Vector3(stand.x, player.global_position.y, stand.z), 0.2)
 	player.face_toward(npc.global_position)
-	player.camera_rig.set_focus(npc.global_position + Vector3(0, 1.45, 0), 2.3, 56.0)
+	player.camera_rig.set_focus(npc.global_position + Vector3(0, 0.9 if lying else 1.45, 0), 2.6 if lying else 2.3, 56.0)
 	player.camera_rig.add_shake(0.05)
 	player.sunlight.set_heat_modifier(&"feeding", sun_heat_multiplier)
-	Sfx.play(&"bite")
-	Sfx.start_loop(&"feed_loop", -6.0)
+	Sfx.play(&"bite", -10.0 if npc.was_asleep else 0.0)
+	Sfx.start_loop(&"feed_loop", -12.0 if npc.was_asleep else -6.0)
 	feed_started.emit(npc)
 
 

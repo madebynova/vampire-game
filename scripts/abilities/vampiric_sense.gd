@@ -11,6 +11,8 @@ extends Ability
 @export var sense_range := 28.0
 @export var wave_speed := 26.0
 @export var ping_interval := 4.2
+## In daylight, smouldering ground tiles show where the sun would burn you.
+@export var embers_enabled := true
 
 const WAVE_SHADER := preload("res://shaders/sense_wave.gdshader")
 
@@ -20,10 +22,14 @@ var _ping_timer := 0.0
 var _wave_strength := 0.0
 var _wave_mat: ShaderMaterial
 var _wave_quad: MeshInstance3D
+var _embers: SenseEmbers
+var _ember_timer := 0.0
 
 
 func _on_setup() -> void:
 	_build_wave_quad()
+	_embers = SenseEmbers.new()
+	add_child(_embers)
 
 
 func _build_wave_quad() -> void:
@@ -48,12 +54,14 @@ func _on_activated() -> void:
 	_ping_timer = ping_interval
 	_wave_strength = 1.0
 	_wave_quad.visible = true
+	_ember_timer = 0.0
 
 
 func _on_deactivated() -> void:
 	Sfx.play(&"sense_off", -4.0)
 	Sfx.stop_loop(&"sense_loop")
 	_wave_quad.visible = false
+	_embers.hide_all()
 	for target in get_tree().get_nodes_in_group(&"sense_targets"):
 		target.apply(false, 0.0, Vector3.ZERO)
 
@@ -73,6 +81,11 @@ func _on_tick(delta: float) -> void:
 	_wave_mat.set_shader_parameter(&"radius", _wave_radius)
 	_wave_mat.set_shader_parameter(&"strength", _wave_strength * fade)
 
+	if embers_enabled:
+		_ember_timer -= delta
+		if _ember_timer <= 0.0:
+			_ember_timer = 0.6
+			_embers.refresh(player.global_position, player.sunlight.to_sun(), player.sunlight.sun_intensity())
 	for target in get_tree().get_nodes_in_group(&"sense_targets"):
 		var d := origin.distance_to(target.global_position)
 		var range_limit := minf(sense_range, target.max_range)

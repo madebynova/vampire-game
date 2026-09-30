@@ -32,6 +32,9 @@ var _memory_body: Label
 var _memory_meta: Label
 var _memory_time := 0.0
 var _memory_age := 0.0
+var _memory_tween: Tween
+
+signal memory_closed
 
 
 func _ready() -> void:
@@ -269,7 +272,7 @@ func _on_died(_cause: StringName) -> void:
 	tw.tween_interval(1.6)
 	tw.tween_property(_banner, "modulate:a", 0.0, 1.0)
 	_sun_box.visible = false
-	_memory_panel.visible = false
+	_close_memory()
 
 
 func _on_feed_completed(_npc: HumanNpc, result: Dictionary) -> void:
@@ -279,14 +282,33 @@ func _on_feed_completed(_npc: HumanNpc, result: Dictionary) -> void:
 	var lines := PackedStringArray()
 	lines.append("%s - %s" % [result["name"], result["occupation"]])
 	lines.append("Blood: %s" % result["blood"])
-	lines.append(result["taste_note"])
+	lines.append("%s   (+%d blood)" % [result["taste_note"], roundi(result["yield"])])
 	for fact in facts:
 		lines.append("Learned: %s" % fact)
-	_memory_meta.text = "\n".join(lines)
+	_memory_meta.text = "
+".join(lines)
 	_memory_panel.visible = true
 	_memory_age = 0.0
-	_memory_time = 20.0
+	_memory_time = 24.0
 	Sfx.play(&"memory", -3.0)
+	# The memory surfaces: panel fades in, the recollection is "remembered" letter by letter,
+	# the facts arrive once it has been told.
+	if _memory_tween:
+		_memory_tween.kill()
+	_memory_panel.modulate.a = 0.0
+	_memory_body.visible_ratio = 0.0
+	_memory_meta.modulate.a = 0.0
+	var read_time := clampf(_memory_body.text.length() * 0.026, 1.5, 5.0)
+	_memory_tween = create_tween()
+	_memory_tween.tween_property(_memory_panel, "modulate:a", 1.0, 0.7)
+	_memory_tween.tween_property(_memory_body, "visible_ratio", 1.0, read_time)
+	_memory_tween.tween_property(_memory_meta, "modulate:a", 1.0, 0.6)
+
+
+func _close_memory() -> void:
+	if _memory_panel.visible:
+		_memory_panel.visible = false
+		memory_closed.emit()
 
 
 func toast(text: String, color := Color.WHITE, seconds := 3.0) -> void:
@@ -316,7 +338,7 @@ func _process(delta: float) -> void:
 		_memory_age += delta
 		_memory_time -= delta
 		if _memory_time <= 0.0 or (_memory_age > 1.0 and Input.is_action_just_pressed(&"interact")):
-			_memory_panel.visible = false
+			_close_memory()
 	if _debug.visible:
 		_update_debug()
 
@@ -367,7 +389,10 @@ func _update_sun() -> void:
 	var eta := s.estimated_seconds_to_death() if lit else INF
 	var title := "SUNLIGHT - %s" % s.stage_name()
 	if not lit:
-		title = "SMOLDERING - stay in shade (%s)" % s.stage_name().to_lower()
+		if s.sun_intensity() > 0.1:
+			title = "SMOLDERING - stay in shade (%s)" % s.stage_name().to_lower()
+		else:
+			title = "COOLING - the dark soothes you (%s)" % s.stage_name().to_lower()
 	elif eta < 3600.0:
 		title += "   ash in %d:%02d" % [int(eta) / 60, int(eta) % 60]
 	if lit and s.heat_multiplier() > 1.2:

@@ -50,6 +50,7 @@ func build() -> void:
 	_ground()
 	_house()
 	_gatehouse()
+	_cottage()
 	_yard_props()
 	_trees()
 	_graveyard()
@@ -159,6 +160,35 @@ func _gatehouse() -> void:
 	_omni(Vector3(-23.5, 2.2, 5.5), Color(1.0, 0.65, 0.35), 0.55, 6.5)
 
 
+# ---------------------------------------------------------------- cottage (Tomas)
+
+func _cottage() -> void:
+	var x0 := 16.0
+	var x1 := 24.0
+	var z0 := 15.0
+	var z1 := 21.0
+	var h := 2.8
+	var stone := STONE.darkened(0.05)
+	Greybox.decal(self, Vector3((x0 + x1) * 0.5, 0.04, (z0 + z1) * 0.5), Vector3(8, 0.06, 6), FLOOR)
+	Greybox.wall(self, Vector2(x0, z0), Vector2(x1, z0), h, WALL_T, stone, [{"at": 5.5, "w": 1.2, "y0": 1.0, "y1": 2.0}])
+	Greybox.wall(self, Vector2(x0, z1), Vector2(x1, z1), h, WALL_T, stone)
+	Greybox.wall(self, Vector2(x1, z0), Vector2(x1, z1), h, WALL_T, stone)
+	# Door in the west wall (z 17.4 .. 19.4).
+	Greybox.wall(self, Vector2(x0, z0), Vector2(x0, z1), h, WALL_T, stone, [{"at": 2.4, "w": 2.0, "y0": 0.0, "y1": 2.4}])
+	Greybox.box(self, Vector3((x0 + x1) * 0.5, h + 0.15, (z0 + z1) * 0.5), Vector3(8.8, 0.3, 6.8), ROOF, Greybox.WORLD, "Roof")
+	Greybox.box(self, Vector3(21.8, 0.225, 18.6), Vector3(2.0, 0.45, 0.95), WOOD, Greybox.WORLD, "Bed")
+	Greybox.decal(self, Vector3(21.5, 0.5, 18.6), Vector3(1.4, 0.06, 0.85), Color(0.55, 0.2, 0.2))
+	Greybox.box(self, Vector3(23.3, 0.4, 16.2), Vector3(1.0, 0.8, 0.7), DARK_WOOD, Greybox.WORLD, "Chest")
+	Greybox.box(self, Vector3(19.2, 0.4, 20.2), Vector3(1.4, 0.8, 0.7), WOOD, Greybox.WORLD, "Table")
+	var lamp := NightLight.new()
+	lamp.position = Vector3(20.0, 2.0, 18.4)
+	lamp.day_energy = 0.4
+	lamp.night_energy = 1.0
+	lamp.omni_range = 6.5
+	lamp.light_color = Color(1.0, 0.7, 0.4)
+	add_child(lamp)
+
+
 # ---------------------------------------------------------------- yard
 
 func _yard_props() -> void:
@@ -182,13 +212,12 @@ func _yard_props() -> void:
 	Greybox.wall(self, Vector2(-8, 21), Vector2(4, 21), 1.2, 0.5, STONE)
 	# A couple of boulders to break up the yard.
 	Greybox.box(self, Vector3(-4.5, 0.6, 12.5), Vector3(1.6, 1.2, 1.4), DARK_STONE, Greybox.WORLD, "Boulder")
-	Greybox.box(self, Vector3(16.5, 0.7, 20.0), Vector3(2.2, 1.4, 1.8), DARK_STONE, Greybox.WORLD, "Boulder")
 
 
 func _trees() -> void:
 	var pines := [
 		Vector3(3.0, 0, 5.0), Vector3(-13.0, 0, 8.0), Vector3(-16.0, 0, 13.0), Vector3(-9.0, 0, 15.0),
-		Vector3(-6.0, 0, 3.0), Vector3(24.0, 0, 4.0), Vector3(26.0, 0, 10.0), Vector3(22.0, 0, 17.0),
+		Vector3(-6.0, 0, 3.0), Vector3(24.0, 0, 4.0), Vector3(26.0, 0, 10.0), Vector3(28.0, 0, 15.0),
 		Vector3(29.0, 0, -3.0), Vector3(-26.0, 0, 18.0), Vector3(-20.0, 0, 24.0), Vector3(12.0, 0, 26.0),
 		Vector3(0.0, 0, 27.0), Vector3(-30.0, 0, 8.0), Vector3(30.0, 0, 22.0), Vector3(-2.0, 0, 30.0),
 	]

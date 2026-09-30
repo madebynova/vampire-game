@@ -6,11 +6,13 @@ extends CanvasLayer
 var sun_target := 0.0
 var sense_target := 0.0
 var feed_target := 0.0
+var memory_target := 0.0
 var fade := 0.0
 
 var _sun := 0.0
 var _sense := 0.0
 var _feed := 0.0
+var _memory := 0.0
 var _hurt := 0.0
 var _flash := 0.0
 var _flash_decay := 3.0
@@ -34,12 +36,14 @@ func _process(delta: float) -> void:
 	_sun = lerpf(_sun, sun_target, 1.0 - exp(-4.0 * delta))
 	_sense = lerpf(_sense, sense_target, 1.0 - exp(-5.0 * delta))
 	_feed = lerpf(_feed, feed_target, 1.0 - exp(-4.0 * delta))
+	_memory = lerpf(_memory, memory_target, 1.0 - exp(-2.5 * delta))
 	_hurt = maxf(_hurt - delta * 1.8, 0.0)
 	_flash = maxf(_flash - delta * _flash_decay, 0.0)
 	var size := get_viewport().get_visible_rect().size
 	_mat.set_shader_parameter(&"sun_strength", _sun)
 	_mat.set_shader_parameter(&"sense_strength", _sense)
 	_mat.set_shader_parameter(&"feed_strength", _feed)
+	_mat.set_shader_parameter(&"memory_strength", _memory)
 	_mat.set_shader_parameter(&"hurt_strength", _hurt)
 	_mat.set_shader_parameter(&"flash_strength", _flash)
 	_mat.set_shader_parameter(&"fade", fade)

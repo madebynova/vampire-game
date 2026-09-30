@@ -40,7 +40,9 @@ func _bind_presentation() -> void:
 	player.feeding.feed_started.connect(func(_n): screen_fx.feed_target = 1.0)
 	player.feeding.feed_completed.connect(func(_n, _r):
 		screen_fx.feed_target = 0.0
+		screen_fx.memory_target = 1.0
 		screen_fx.flash(Color(0.6, 0.0, 0.05), 0.7, 1.4))
+	hud.memory_closed.connect(func(): screen_fx.memory_target = 0.0)
 	player.feeding.feed_interrupted.connect(func(_n, _p): screen_fx.feed_target = 0.0)
 	player.health.damaged.connect(func(amount: float, _s): screen_fx.hurt_pulse(clampf(0.1 + amount * 0.05, 0.1, 0.5)))
 	player.health.died.connect(_on_player_died)
@@ -81,6 +83,8 @@ func _process(_delta: float) -> void:
 	var day := clampf(tod.sun_strength() * 1.4, 0.0, 1.0)
 	Sfx.set_loop_volume(&"crickets_loop", linear_to_db(maxf(night * 0.5, 0.0001)))
 	Sfx.set_loop_volume(&"birds_loop", linear_to_db(maxf(day * 0.35, 0.0001)))
+	if not hud._memory_panel.visible:
+		screen_fx.memory_target = 0.0
 	var s := player.sunlight
 	var glare := s.burn_ratio() * 0.9
 	if s.stage > 0 and s.strength > 0.03:

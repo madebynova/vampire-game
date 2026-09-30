@@ -6,26 +6,40 @@ extends Interactable
 
 
 func is_available(actor: Player) -> bool:
+	var can_feed := actor.form.current.can_feed
 	match npc.mode:
 		HumanNpc.Mode.DRAINED, HumanNpc.Mode.ENTRANCED:
 			return false
-		HumanNpc.Mode.FLEEING:
-			return actor.form.current.can_feed
+		HumanNpc.Mode.FLEEING, HumanNpc.Mode.SLEEPING, HumanNpc.Mode.STUNNED:
+			return can_feed  # nobody chats with a runner, a sleeper or someone in shock
 	return true
 
 
 func get_prompt(actor: Player) -> String:
-	var who := npc.profile.display_name
+	var who := npc.profile.display_name if npc.known else "the stranger"
 	if actor.form.current.can_feed:
-		return "Seize %s" % who if npc.mode == HumanNpc.Mode.FLEEING else "Feed on %s" % who
+		match npc.mode:
+			HumanNpc.Mode.FLEEING:
+				return "Seize %s" % who
+			HumanNpc.Mode.SLEEPING:
+				return "Feed on %s (asleep)" % who
+		return "Feed on %s" % who
+	if npc.mode == HumanNpc.Mode.FOLLOWING:
+		return "Talk to %s (send them back to work)" % who
 	return "Talk to %s" % who
 
 
 func get_hold_time(actor: Player) -> float:
 	if not actor.form.current.can_feed:
 		return 0.0
-	# Tackling someone who is already running is a quick lunge; a calm victim takes a moment.
-	return 0.25 if npc.mode == HumanNpc.Mode.FLEEING else 0.45
+	match npc.mode:
+		HumanNpc.Mode.FLEEING:
+			return 0.25  # tackling a runner is a quick lunge
+		HumanNpc.Mode.STUNNED:
+			return 0.3
+		HumanNpc.Mode.SLEEPING:
+			return 0.6   # slow and careful
+	return 0.45
 
 
 func interact(actor: Player) -> void:
