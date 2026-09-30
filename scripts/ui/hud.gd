@@ -249,9 +249,16 @@ func _refresh_status() -> void:
 		_status_label.text = ""
 
 
-func _on_stage_changed(stage: SunlightExposure.Stage, old: SunlightExposure.Stage) -> void:
-	if stage == SunlightExposure.Stage.WARNING and old == SunlightExposure.Stage.SAFE:
-		toast("Sunlight! Your skin prickles - find shade.", Color(1.0, 0.85, 0.4), 2.5)
+func _on_stage_changed(stage: int, old: int) -> void:
+	if stage <= old or player == null:
+		return
+	var f := player.sunlight.stage_fraction()
+	if stage == 1:
+		toast("Sunlight! Your skin prickles - find shade.", Color(1.0, 0.85, 0.4), 3.0)
+	elif f < 0.99:
+		toast("Sunlight: %s exposure. The light is doing real harm." % player.sunlight.stage_name().to_lower(), Color(1.0, 0.6, 0.25), 3.0)
+	else:
+		toast("CRITICAL exposure. Get out of the light or you will die.", Color(1.0, 0.2, 0.15), 4.0)
 
 
 func _on_died(_cause: StringName) -> void:
@@ -351,22 +358,26 @@ func _update_prompt() -> void:
 
 func _update_sun() -> void:
 	var s := player.sunlight
-	var stage := s.stage
-	_sun_box.visible = stage != SunlightExposure.Stage.SAFE
+	_sun_box.visible = s.stage > 0
 	if not _sun_box.visible:
 		return
 	_sun_bar.value = s.burn_ratio() * 100.0
-	var lit := s.exposure > 0.05
-	match stage:
-		SunlightExposure.Stage.WARNING:
-			_sun_label.text = "SUNLIGHT"
-			_sun_label.add_theme_color_override(&"font_color", Color(1.0, 0.9, 0.4))
-		SunlightExposure.Stage.BURNING:
-			_sun_label.text = "BURNING - get out of the light!" if lit else "SMOLDERING - stay in shade"
-			_sun_label.add_theme_color_override(&"font_color", Color(1.0, 0.55, 0.15))
-		SunlightExposure.Stage.SEARING:
-			_sun_label.text = "SEARING - YOU WILL DIE!" if lit else "SMOLDERING BADLY - stay in shade"
-			_sun_label.add_theme_color_override(&"font_color", Color(1.0, 0.15, 0.1))
+	var lit := s.strength > 0.03
+	var f := s.stage_fraction()
+	var eta := s.estimated_seconds_to_death() if lit else INF
+	var title := "SUNLIGHT - %s" % s.stage_name()
+	if not lit:
+		title = "SMOLDERING - stay in shade (%s)" % s.stage_name().to_lower()
+	elif eta < 3600.0:
+		title += "   ash in %d:%02d" % [int(eta) / 60, int(eta) % 60]
+	if lit and s.heat_multiplier() > 1.2:
+		title += "   (x%.1f heat)" % s.heat_multiplier()
+	_sun_label.text = title
+	_sun_label.add_theme_color_override(&"font_color", Color(1.0, 0.9, 0.4).lerp(Color(1.0, 0.15, 0.1), f))
+	var fg := StyleBoxFlat.new()
+	fg.bg_color = Color(1.0, 0.75, 0.25).lerp(Color(1.0, 0.15, 0.1), f)
+	fg.set_corner_radius_all(3)
+	_sun_bar.add_theme_stylebox_override(&"fill", fg)
 
 
 func _update_debug() -> void:

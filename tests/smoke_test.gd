@@ -265,7 +265,7 @@ func _run() -> void:
 		await _wait(0.4)
 		_check(not player.state.is_dead(), "survived feeding in open sun (hp %.0f)" % player.health.value)
 		_check(world.tomas.mode == HumanNpc.Mode.DRAINED, "Tomas drained after feed")
-		_check(player.health.value < hp0 - 1.0, "chase + feed under sunlight costs health (%.0f -> %.0f hp)" % [hp0, player.health.value])
+		_check(player.sunlight.model.heat > 3.0, "chase + feed under sunlight builds heat (%.1f) - health was %.0f -> %.0f" % [player.sunlight.model.heat, hp0, player.health.value])
 		_check(main.hud._memory_title.text.begins_with("Nine Sets"), "a terrified Tomas gives a DIFFERENT memory (afraid variant): %s" % main.hud._memory_title.text)
 		_check(not world.stash.discovered, "terror blood does not reveal the buried key")
 		main.hud._memory_panel.visible = false
@@ -287,7 +287,9 @@ func _run() -> void:
 	Input.action_release(&"interact")
 	await _wait(0.3)
 	var lost := hp_sun0 - player.health.value
-	_check(not player.state.is_dead() and lost > 8.0 and lost < 60.0, "a full feed in open sun is survivable but costly (-%.0f hp, meter %.1f)" % [lost, player.sunlight.meter])
+	# Task 1 asserted "-8..-60 hp" here. With the ~3 minute sun that is obsolete by design: a feed now
+	# costs *heat* (doubled while feeding), not health. Heat is what the coffin/night/shade recover.
+	_check(not player.state.is_dead() and player.sunlight.model.heat > 4.0 and lost < 15.0, "feeding in open sun heats you (heat %.1f, doubled while feeding) but is survivable (-%.0f hp)" % [player.sunlight.model.heat, lost])
 	_check(main.hud._memory_title.text.begins_with("The Well"), "calm Tomas: %s" % main.hud._memory_title.text)
 	_check(world.stash.discovered, "calm blood revealed the buried key (blood -> information)")
 	main.hud._memory_panel.visible = false
@@ -295,7 +297,7 @@ func _run() -> void:
 	print("[TEST] --- SECRET REVEALED BY SENSE, THEN DUG ---")
 	await _run_to(Vector3(3.0, 0, -3.0), 2.0, 6.0)
 	await _wait(2.5)
-	_check(player.sunlight.exposure < 0.1, "back in shade (exposure %.2f, meter %.2f)" % [player.sunlight.exposure, player.sunlight.meter])
+	_check(player.sunlight.exposure < 0.1, "back in shade (exposure %.2f, meter %.2f)" % [player.sunlight.exposure, player.sunlight.model.heat])
 	player.health.revive(1.0)
 	player.sunlight.reset()
 	_place(Vector3(11.0, 0, 4.0), 0.0)
@@ -314,25 +316,39 @@ func _run() -> void:
 	await _wait(0.4)
 	_check(_prompt().begins_with("Unlock"), "Hatch now says: %s" % _prompt())
 
-	print("[TEST] --- SUN DEATH -> COFFIN ---")
+	print("[TEST] --- SUN DEATH (~3 minutes, run at 8x speed) -> COFFIN ---")
 	player.health.revive(1.0)
 	player.sunlight.reset()
 	_place(Vector3(14.0, 0, 5.0), 0.0)
 	_stages_seen.clear()
+	Engine.max_physics_steps_per_frame = 64
+	Engine.time_scale = 8.0
+	var frame0 := Engine.get_physics_frames()
 	var died_at := -1.0
-	var shot_burning := false
-	t = 0.0
-	while t < 14.0:
+	var shot_severe := false
+	var hp_at_6 := -1.0
+	var hud_checked := false
+	var secs := 0.0
+	while secs < 260.0:
 		await get_tree().physics_frame
-		t += get_physics_process_delta_time()
-		if not shot_burning and player.sunlight.stage == SunlightExposure.Stage.BURNING and player.sunlight.meter > 2.5:
-			shot_burning = true
-			await _shot("11_burning")
+		secs = float(Engine.get_physics_frames() - frame0) / Engine.physics_ticks_per_second * 8.0  # game seconds (time_scale 8)
+		if hp_at_6 < 0.0 and secs >= 6.0:
+			hp_at_6 = player.health.value
+		if not hud_checked and secs >= 40.0:
+			hud_checked = true
+			_check(main.hud._sun_box.visible and main.hud._sun_label.text.contains("ash in"), "HUD shows sun stage and a time-to-ash estimate: '%s'" % main.hud._sun_label.text)
+		if not shot_severe and player.sunlight.stage >= 3:
+			shot_severe = true
+			await _shot("11_severe")
 		if player.state.is_dead():
-			died_at = t
+			died_at = secs
 			break
-	_check(_stages_seen.has(1) and _stages_seen.has(2) and _stages_seen.has(3), "sun escalates through stages 1,2,3 (%s)" % str(_stages_seen))
-	_check(died_at > 5.0 and died_at < 12.0, "continued exposure kills the vampire in a fair time (t=%.1fs)" % died_at)
+	Engine.time_scale = 1.0
+	Engine.max_physics_steps_per_frame = 8
+	_check(hp_at_6 >= 99.0, "first seconds in sunlight are a warning, not damage (hp %.1f at 6 s)" % hp_at_6)
+	var seen_up := _stages_seen.filter(func(x): return x > 0)
+	_check(seen_up == [1, 2, 3, 4], "sun escalates through Initial, Prolonged, Severe, Critical (%s)" % str(seen_up))
+	_check(died_at > 165.0 and died_at < 195.0, "continued exposure kills in about three minutes (%.0f s)" % died_at)
 	await _shot("12_death")
 	await _wait(7.5)
 	_check(not player.state.is_dead() and player.state.mode == PlayerState.Mode.NORMAL, "player is alive and controllable after death/respawn")
@@ -384,4 +400,4 @@ func _run() -> void:
 	_place(Vector3(14.0, 0, 5.0), 0.0)
 	player.health.revive(1.0)
 	await _wait(3.5)
-	_check(player.sunlight.stage == SunlightExposure.Stage.SAFE and player.health.value >= 99.0, "Human takes no sun damage (hp %.0f)" % player.health.value)
+	_check(player.sunlight.stage == 0 and player.health.value >= 99.0, "Human takes no sun damage (hp %.0f)" % player.health.value)

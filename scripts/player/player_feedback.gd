@@ -29,17 +29,28 @@ func _on_setup() -> void:
 		_on_form_changed(null, player.form.current)
 
 
-func _process(_delta: float) -> void:
-	var stage := player.sunlight.stage
-	_smoke.emitting = stage >= SunlightExposure.Stage.BURNING
-	_embers.emitting = stage >= SunlightExposure.Stage.SEARING
-	_smoke.amount = 26 if stage == SunlightExposure.Stage.BURNING else 40
-	var burn := player.sunlight.burn_ratio()
-	if stage >= SunlightExposure.Stage.BURNING and player.sunlight.exposure > 0.05:
-		Sfx.start_loop(&"sizzle_loop", lerpf(-16.0, -2.0, burn))
-		Sfx.set_loop_volume(&"sizzle_loop", lerpf(-16.0, -2.0, burn))
+var _heartbeat_timer := 0.0
+
+
+func _process(delta: float) -> void:
+	var sun := player.sunlight
+	var lit := sun.strength > 0.03
+	var frac := sun.stage_fraction()
+	_smoke.emitting = sun.stage > 0 and frac >= 0.5 and lit
+	_embers.emitting = frac >= 0.75 and lit
+	_smoke.amount = 26 if frac < 0.75 else 40
+	if lit and frac >= 0.5:
+		var vol := lerpf(-16.0, -3.0, frac)
+		Sfx.start_loop(&"sizzle_loop", vol)
+		Sfx.set_loop_volume(&"sizzle_loop", vol)
 	else:
 		Sfx.stop_loop(&"sizzle_loop")
+	# Critical: your own heartbeat, quickening.
+	if lit and frac >= 0.99:
+		_heartbeat_timer -= delta
+		if _heartbeat_timer <= 0.0:
+			_heartbeat_timer = 0.55
+			Sfx.play(&"heartbeat", -4.0, 1.3)
 	player.camera_rig.fov_boost = 6.0 if Input.is_action_pressed(&"sprint") and player.velocity.length() > 3.0 else 0.0
 
 
@@ -60,10 +71,11 @@ func _on_transform_started(to_form: FormData) -> void:
 		Fx.burst(player, player.global_position + Vector3(0, 0.3, 0), Color(0.05, 0.05, 0.07, 0.95), 24, 2.5, 0.25, 1.4, 1.5)
 
 
-func _on_stage_changed(stage: SunlightExposure.Stage, old: SunlightExposure.Stage) -> void:
+func _on_stage_changed(stage: int, old: int) -> void:
 	if stage > old:
-		Sfx.play(&"sun_warn", -4.0 + 3.0 * stage, 1.0 + 0.12 * stage)
-		player.camera_rig.add_shake(0.012 * stage)
+		var f := player.sunlight.stage_fraction()
+		Sfx.play(&"sun_warn", -8.0 + 8.0 * f, 0.9 + 0.35 * f)
+		player.camera_rig.add_shake(0.01 + 0.03 * f)
 
 
 func _on_died(_cause: StringName) -> void:

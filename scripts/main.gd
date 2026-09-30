@@ -83,7 +83,7 @@ func _process(_delta: float) -> void:
 	Sfx.set_loop_volume(&"birds_loop", linear_to_db(maxf(day * 0.35, 0.0001)))
 	var s := player.sunlight
 	var glare := s.burn_ratio() * 0.9
-	if s.stage != SunlightExposure.Stage.SAFE and s.exposure > 0.05:
+	if s.stage > 0 and s.strength > 0.03:
 		glare += 0.08
 	screen_fx.sun_target = clampf(glare, 0.0, 1.0)
 

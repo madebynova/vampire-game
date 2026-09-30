@@ -11,6 +11,9 @@ signal feed_interrupted(npc: HumanNpc, progress: float)
 
 @export var duration := 3.6
 @export var min_hold := 0.35
+## Kneeling motionless over a victim: skin flushed with blood, no cloak to hide in. Sunlight
+## heat is multiplied by this while feeding.
+@export var sun_heat_multiplier := 2.0
 
 var target: HumanNpc
 var progress := 0.0
@@ -48,6 +51,7 @@ func start(npc: HumanNpc) -> void:
 	player.face_toward(npc.global_position)
 	player.camera_rig.set_focus(npc.global_position + Vector3(0, 1.45, 0), 2.3, 56.0)
 	player.camera_rig.add_shake(0.05)
+	player.sunlight.set_heat_modifier(&"feeding", sun_heat_multiplier)
 	Sfx.play(&"bite")
 	Sfx.start_loop(&"feed_loop", -6.0)
 	feed_started.emit(npc)
@@ -100,5 +104,6 @@ func _abort() -> void:
 
 func _end() -> void:
 	target = null
+	player.sunlight.clear_heat_modifier(&"feeding")
 	Sfx.stop_loop(&"feed_loop")
 	player.camera_rig.clear_focus()

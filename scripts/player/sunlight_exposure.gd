@@ -1,46 +1,100 @@
 class_name SunlightExposure
 extends PlayerComponent
-## Detects real sunlight by ray-casting from the body toward the sun (so buildings, walls
-## and tree canopies genuinely make shade) and turns exposure into escalating danger.
+## Detects real sunlight by ray-casting from the body toward the sun (so buildings, walls and
+## tree canopies genuinely make shade) and feeds it to a SunlightModel.
 ##
-##   Stage 1 WARNING  - you feel it. No damage yet.
-##   Stage 2 BURNING  - damage + slowed.
-##   Stage 3 SEARING  - heavy damage + heavily slowed.
-##   Stage 4 DEATH    - health hits zero -> Health.died -> coffin.
+## Strength of the heat applied per second =
+##     (fraction of body in direct light)              -- geometry, this script
+##   x (sun intensity from TimeOfDay)                   -- time of day
+##   x (form.sun_heat_multiplier)                       -- what you are
+##   x (every heat modifier registered by other systems) -- how you are protected/exposed
 ##
-## A "burn meter" fills while exposed and drains slowly in shade, so dodging in and out of
-## light is not free.
+## Other systems (abilities, items, blood effects, being mid-feed...) change the outcome only by
+## calling set_heat_modifier(source, multiplier) - they never touch the numbers. The stage table
+## (how much heat is how bad) lives in a SunlightProfile resource.
 
-enum Stage { SAFE, WARNING, BURNING, SEARING }
+signal stage_changed(new_stage: int, old_stage: int)
 
-signal stage_changed(new_stage: Stage, old_stage: Stage)
+const SUN_MASK := 1 | 16   # world + canopies (sun blockers)
 
-const SUN_MASK := 1 | 16
-
+@export var profile_id: StringName = &"default"
 @export var sample_heights := PackedFloat32Array([0.15, 0.9, 1.7])
 @export var ray_length := 80.0
-@export var burning_at := 1.5
-@export var searing_at := 4.5
-@export var meter_max := 6.0
-@export var meter_decay := 0.7
-@export var burning_dps := 6.0
-@export var searing_dps := 22.0
-@export var burning_speed_mult := 0.85
-@export var searing_speed_mult := 0.55
 
-var exposure := 0.0      ## 0..1, fraction of body currently in direct sun
-var meter := 0.0         ## accumulated burn, seconds-equivalent
-var stage: Stage = Stage.SAFE
+var model: SunlightModel
+var exposure := 0.0    ## 0..1 fraction of the body in direct light (geometry only)
+var strength := 0.0    ## effective heat/second right now (0 in shade / at night / when immune)
+var stage := 0:
+	get:
+		return model.stage if model else 0
 var sun: DirectionalLight3D
+var _tod: TimeOfDay
+var _mods: Dictionary = {}
+var _last_stage := 0
 var _smoothed := 0.0
 
 
 func _on_setup() -> void:
+	var profile := ContentRegistry.get_def(&"SunlightProfile", profile_id) as SunlightProfile
+	assert(profile != null, "SunlightExposure: unknown profile %s" % profile_id)
+	model = SunlightModel.new(profile)
 	player.health.died.connect(func(_c): reset())
 
 
-var _tod: TimeOfDay
+# ---------------------------------------------------------------- extension API
 
+## Multiply incoming sunlight heat (0.5 = half heat, 2.0 = double, 0 = immune). Replaces any
+## earlier multiplier from the same `source`.
+func set_heat_modifier(source: StringName, multiplier: float) -> void:
+	_mods[source] = multiplier
+
+
+func clear_heat_modifier(source: StringName) -> void:
+	_mods.erase(source)
+
+
+## Product of the form multiplier and every registered modifier.
+func heat_multiplier() -> float:
+	var m := player.form.current.sun_heat_multiplier
+	for v in _mods.values():
+		m *= v
+	return m
+
+
+func stage_count() -> int:
+	return model.profile.stage_count()
+
+
+func stage_name() -> String:
+	return model.stage_name()
+
+
+## Stage as 0..1 (0 = safe, 1 = the last stage), independent of how many stages a profile has.
+func stage_fraction() -> float:
+	return float(stage) / maxf(stage_count() - 1, 1)
+
+
+## Heat as 0..1 of the way to the critical stage.
+func burn_ratio() -> float:
+	return model.ratio()
+
+
+## Seconds until death if things stay exactly as they are right now (INF if not in light).
+func estimated_seconds_to_death() -> float:
+	return model.seconds_to_death(player.health.value, strength)
+
+
+func reset() -> void:
+	model.reset()
+	_smoothed = 0.0
+	exposure = 0.0
+	strength = 0.0
+	_mods.clear()
+	player.speed_modifiers.erase(&"sunlight")
+	_emit_if_changed()
+
+
+# ---------------------------------------------------------------- sun source
 
 ## Direction pointing FROM the ground TOWARD the sun.
 func to_sun() -> Vector3:
@@ -65,71 +119,41 @@ func is_vulnerable() -> bool:
 		and player.state.mode != PlayerState.Mode.RESTING
 
 
+# ---------------------------------------------------------------- simulation
+
 func _physics_process(delta: float) -> void:
-	exposure = _sample_exposure() * sun_intensity()
-	_smoothed = move_toward(_smoothed, exposure, delta * 8.0)
-	var in_sun := _smoothed > 0.05
-
-	if is_vulnerable() and in_sun:
-		meter = minf(meter + _smoothed * delta, meter_max)
+	var intensity := sun_intensity()
+	# Skip the rays entirely when there is no sun or nothing can be burned.
+	if intensity <= 0.001 or not is_vulnerable():
+		exposure = 0.0
 	else:
-		meter = maxf(meter - meter_decay * delta, 0.0)
+		exposure = _sample_exposure()
+	_smoothed = move_toward(_smoothed, exposure, delta * 8.0)
+	strength = _smoothed * intensity * heat_multiplier() if is_vulnerable() else 0.0
 
-	var new_stage := Stage.SAFE
-	if is_vulnerable() and (in_sun or meter > 0.0):
-		if meter >= searing_at:
-			new_stage = Stage.SEARING
-		elif meter >= burning_at:
-			new_stage = Stage.BURNING
-		elif in_sun:
-			new_stage = Stage.WARNING
-	_set_stage(new_stage)
+	var damage := model.step(delta, strength)
+	if damage > 0.0:
+		player.health.damage(damage, &"sunlight")
+	player.health.set_regen_blocked(&"sunlight", strength > model.profile.shade_threshold)
 
-	# Damage only while actually standing in light; smouldering after leaving just slows you.
-	if in_sun and is_vulnerable():
-		var dps := 0.0
-		if stage == Stage.BURNING:
-			dps = burning_dps
-		elif stage == Stage.SEARING:
-			dps = searing_dps
-		if dps > 0.0:
-			player.health.damage(dps * _smoothed * delta, &"sunlight")
-	player.health.set_regen_blocked(&"sunlight", in_sun and is_vulnerable())
-
-	match stage:
-		Stage.BURNING:
-			player.speed_modifiers[&"sunlight"] = burning_speed_mult
-		Stage.SEARING:
-			player.speed_modifiers[&"sunlight"] = searing_speed_mult
-		_:
-			player.speed_modifiers.erase(&"sunlight")
+	if model.stage > 0:
+		player.speed_modifiers[&"sunlight"] = model.speed_multiplier()
+	else:
+		player.speed_modifiers.erase(&"sunlight")
+	_emit_if_changed()
 
 
-## 0..1 progress from safe to searing, for UI/VFX.
-func burn_ratio() -> float:
-	return clampf(meter / searing_at, 0.0, 1.0)
-
-
-func reset() -> void:
-	meter = 0.0
-	_smoothed = 0.0
-	exposure = 0.0
-	player.speed_modifiers.erase(&"sunlight")
-	_set_stage(Stage.SAFE)
-
-
-func _set_stage(s: Stage) -> void:
-	if s == stage:
-		return
-	var old := stage
-	stage = s
-	stage_changed.emit(s, old)
+func _emit_if_changed() -> void:
+	if model.stage != _last_stage:
+		var old := _last_stage
+		_last_stage = model.stage
+		stage_changed.emit(_last_stage, old)
 
 
 func _sample_exposure() -> float:
 	var dir := to_sun()
 	if dir.y < 0.02:
-		return 0.0  # sun below horizon
+		return 0.0  # sun below the horizon
 	var space := player.get_world_3d().direct_space_state
 	var lit := 0
 	for h in sample_heights:
