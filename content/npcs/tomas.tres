@@ -70,6 +70,7 @@ greeting_lines = PackedStringArray("Evening, stranger. Mind the road - it's a lo
 familiar_lines = PackedStringArray("You again. I turn in when the lamps are lit - the cottage past the graves. Early to bed, early to rise.", "Nobody bothers me at night. Sleep like a stone, I do. Wife used to say the house could burn down around me.")
 trust_lines = PackedStringArray("You've an honest face. Come, I'll show you where the shade is good.", "Lead on, then. I'll walk with you a spell.")
 night_lines = PackedStringArray("Lamp's lit, so I'm awake. Just barely. Don't stay out in the damp.")
+blood_type = &"aged"
 blood_description = "Aged and smoky. Pipe tobacco, cold rain, old habit."
 blood_yield = 45.0
 memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid")])

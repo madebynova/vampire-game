@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BloodDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/blood_definition.gd" id="1_b"]
+
+[resource]
+script = ExtResource("1_b")
+id = &"common"
+display_name = "Common"
+description = "Warm and ordinary."
+sense_color = Color(0.85, 0.04, 0.1, 1)
+yield_multiplier = 1.0

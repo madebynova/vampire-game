@@ -31,6 +31,8 @@ extends ContentDef
 @export var night_lines: PackedStringArray = PackedStringArray()
 
 @export_group("Blood")
+## Id of a BloodDefinition (content/blood): colour in Sense, yield multiplier, name in the memory panel.
+@export var blood_type: StringName = &"common"
 ## How the blood smells/tastes. Vampiric Sense shows it at close range.
 @export var blood_description := "Warm and ordinary."
 @export var blood_yield := 40.0
@@ -45,6 +47,10 @@ func schedule_for(hour: float) -> ScheduleEntry:
 		if e.contains_hour(hour):
 			return e
 	return null
+
+
+func blood_definition() -> BloodDefinition:
+	return ContentRegistry.get_def(&"BloodDefinition", blood_type) as BloodDefinition
 
 
 ## Best memory for the victim's state; falls back to &"any", then the first memory.

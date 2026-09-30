@@ -126,6 +126,10 @@ func _build_all() -> void:
 	_streams[&"crickets_loop"] = _to_wav(_crickets_loop(), true)
 	_streams[&"birds_loop"] = _to_wav(_birds_loop(), true)
 	_streams[&"bell"] = _to_wav(_bell())
+	# Data override: any SoundDefinition (content/sounds or a mod) replaces the sound of that name.
+	for def: SoundDefinition in ContentRegistry.list(&"SoundDefinition"):
+		if def.stream != null:
+			_streams[def.id] = def.stream
 
 
 func _to_wav(samples: PackedFloat32Array, looped := false) -> AudioStreamWAV:

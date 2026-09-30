@@ -157,13 +157,19 @@ func _build() -> void:
 
 	# Bottom-left controls.
 	_help = _label(
-		"WASD move    Shift run    Space jump    Mouse look\n"
-		+ "F  transform  (Human <-> Vampire)\n"
-		+ "Q  Vampiric Sense  (Vampires only)\n"
-		+ "E  interact - as a Vampire, HOLD E on a human to feed\n"
+		"WASD move    Shift run    Space jump    Mouse look
+"
+		+ "F  transform  (Human <-> Vampire)      Q  Vampiric Sense (Vampire)
+"
+		+ "E  Human: talk - friendly chats build trust, trusting people will follow you
+"
+		+ "E  Vampire: HOLD to feed - sleepers, the unaware and the stunned are easiest
+"
+		+ "Coffin: sleep until dusk.   Sunlight kills slowly - watch the sun and the clock
+"
 		+ "Esc free mouse    H hide this    F3 debug", 15, Color(0.85, 0.85, 0.85))
 	_help.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_help.position = Vector2(22, -130)
+	_help.position = Vector2(22, -152)
 	_root.add_child(_help)
 
 	_clock = _label("", 22, Color(0.95, 0.9, 0.8))
@@ -281,7 +287,7 @@ func _on_feed_completed(_npc: HumanNpc, result: Dictionary) -> void:
 	var facts: PackedStringArray = result["facts"]
 	var lines := PackedStringArray()
 	lines.append("%s - %s" % [result["name"], result["occupation"]])
-	lines.append("Blood: %s" % result["blood"])
+	lines.append("%s blood: %s" % [result["blood_type"], result["blood"]])
 	lines.append("%s   (+%d blood)" % [result["taste_note"], roundi(result["yield"])])
 	for fact in facts:
 		lines.append("Learned: %s" % fact)

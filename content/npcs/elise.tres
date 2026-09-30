@@ -69,6 +69,7 @@ greeting_lines = PackedStringArray("Oh! You startled me. Are you with the house?
 familiar_lines = PackedStringArray("I can't stay indoors after dark. I sit by the door with the lantern and watch the manor. I sleep when the moon is high, if I sleep at all.")
 trust_lines = PackedStringArray("You're kind. Would you walk me toward the road? I'd feel safer.", "Of course. Lead on.")
 night_lines = PackedStringArray("Who's there?! ...Oh. Forgive me. The dark makes everyone a stranger.")
+blood_type = &"bright"
 blood_description = "Bright and restless. Lavender, thread-oil, and fear she has swallowed."
 blood_yield = 35.0
 memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid")])

@@ -11,6 +11,8 @@ const MOD_ROOT := "user://mods"
 
 var _by_type: Dictionary = {}
 var mods: PackedStringArray = PackedStringArray()
+## mod folder name -> {name, version, author, description} from an optional mod.cfg
+var mod_info: Dictionary = {}
 
 
 func _ready() -> void:
@@ -20,11 +22,13 @@ func _ready() -> void:
 func reload() -> void:
 	_by_type.clear()
 	mods = PackedStringArray()
+	mod_info.clear()
 	_scan(CORE_ROOT, "core")
 	var dir := DirAccess.open(MOD_ROOT)
 	if dir != null:
 		for mod_name in dir.get_directories():
 			mods.append(mod_name)
+			mod_info[mod_name] = _read_manifest("%s/%s/mod.cfg" % [MOD_ROOT, mod_name], mod_name)
 			_scan("%s/%s/content" % [MOD_ROOT, mod_name], mod_name)
 	reloaded.emit()
 
@@ -53,6 +57,16 @@ func npc(id: StringName) -> NpcProfile:
 	return get_def(&"NpcProfile", id) as NpcProfile
 
 
+## Optional mod.cfg:  [mod] name="..." version="1.0" author="..." description="..."
+func _read_manifest(path: String, fallback_name: String) -> Dictionary:
+	var info := {"name": fallback_name, "version": "", "author": "", "description": ""}
+	var cfg := ConfigFile.new()
+	if cfg.load(path) == OK:
+		for k in info.keys():
+			info[k] = str(cfg.get_value("mod", k, info[k]))
+	return info
+
+
 func _scan(path: String, source: String) -> void:
 	var dir := DirAccess.open(path)
 	if dir == null:
@@ -68,7 +82,8 @@ func _scan(path: String, source: String) -> void:
 
 
 func _register(path: String, source: String) -> void:
-	var res := ResourceLoader.load(path)
+	var mode := ResourceLoader.CACHE_MODE_REUSE if source == "core" else ResourceLoader.CACHE_MODE_IGNORE
+	var res := ResourceLoader.load(path, "", mode)
 	if res == null or not (res is ContentDef):
 		return
 	var def := res as ContentDef

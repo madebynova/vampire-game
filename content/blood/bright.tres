@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BloodDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/blood_definition.gd" id="1_b"]
+
+[resource]
+script = ExtResource("1_b")
+id = &"bright"
+display_name = "Bright"
+description = "Young, quick and heady. Thin, but it sings."
+sense_color = Color(1, 0.12, 0.3, 1)
+yield_multiplier = 0.9

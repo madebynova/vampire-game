@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BloodDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/blood_definition.gd" id="1_b"]
+
+[resource]
+script = ExtResource("1_b")
+id = &"sweet"
+display_name = "Sweet"
+description = "Honeyed and syrupy."
+sense_color = Color(1, 0.4, 0.6, 1)
+yield_multiplier = 1.3

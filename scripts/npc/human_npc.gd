@@ -629,8 +629,19 @@ func get_feed_result() -> Dictionary:
 		"facts": memory.facts if memory else PackedStringArray(),
 		"reveals": memory.reveals_secret if memory else &"",
 		"condition": feed_condition(),
-		"yield": profile.blood_yield * (1.25 if was_afraid_when_grabbed else 1.0),
+		"blood_type": _blood_name(),
+		"yield": profile.blood_yield * _yield_multiplier() * (1.25 if was_afraid_when_grabbed else 1.0),
 	}
+
+
+func _blood_name() -> String:
+	var b := profile.blood_definition()
+	return b.display_name if b else "Common"
+
+
+func _yield_multiplier() -> float:
+	var b := profile.blood_definition()
+	return b.yield_multiplier if b else 1.0
 
 
 ## A new night: everyone is back on their routine, rested and forgetful.
@@ -683,7 +694,8 @@ func _mood() -> String:
 ##   near  (<= 11 m): who, mood, and (< 7 m) what their blood smells like
 func get_sense_data(dist := 0.0) -> Dictionary:
 	var bpm := get_heart_rate()
-	var col := Color(0.85, 0.04, 0.1)
+	var b := profile.blood_definition()
+	var col := b.sense_color if b else Color(0.85, 0.04, 0.1)
 	match mode:
 		Mode.FLEEING, Mode.STUNNED:
 			col = Color(1.0, 0.35, 0.1)

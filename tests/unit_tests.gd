@@ -13,6 +13,7 @@ func _ready() -> void:
 	_test_sunlight_model()
 	_test_registry()
 	_test_mod_override()
+	_test_example_mod()
 	print("[UNIT] ===== %d checks, %d failures =====" % [checks, failures])
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -241,3 +242,58 @@ func _test_mod_override() -> void:
 	DirAccess.remove_absolute("user://mods/unit_test_mod")
 	ContentRegistry.reload()
 	_check(ContentRegistry.form(&"human").display_name == "Human" and ContentRegistry.form(&"unit_test_form") == null, "removing the mod restores core content")
+
+
+func _test_example_mod() -> void:
+	print("[UNIT] --- example mod (examples/example_mod) ---")
+	var blood := ContentRegistry.get_def(&"BloodDefinition", &"aged") as BloodDefinition
+	_check(blood != null and blood.yield_multiplier > 1.0, "core blood definitions load (aged x%.2f)" % (blood.yield_multiplier if blood else 0.0))
+	_check(ContentRegistry.npc(&"tomas").blood_definition().id == &"aged", "NPC profiles reference blood by id")
+	var core := ContentRegistry.get_def(&"SunlightProfile", &"default") as SunlightProfile
+	var core_t := _survival_seconds(core)
+	_copy_dir("res://examples/example_mod", "user://mods/example_mod")
+	ContentRegistry.reload()
+	_check(ContentRegistry.mods.has("example_mod") and ContentRegistry.mod_info["example_mod"]["name"] == "Gentle Sun", "mod.cfg manifest is read (%s)" % str(ContentRegistry.mod_info.get("example_mod", {}).get("name", "?")))
+	_check(ContentRegistry.get_def(&"BloodDefinition", &"sweet") != null, "the mod added a new blood type")
+	var modded := ContentRegistry.get_def(&"SunlightProfile", &"default") as SunlightProfile
+	_check(modded.source == "example_mod", "the mod replaced the core sunlight profile")
+	var mod_t := _survival_seconds(modded)
+	_check(mod_t > core_t * 1.8 and mod_t < core_t * 2.2, "gentle sun roughly doubles survival (%.0f s -> %.0f s)" % [core_t, mod_t])
+	_remove_dir("user://mods/example_mod")
+	ContentRegistry.reload()
+	_check(not ContentRegistry.mods.has("example_mod") and ContentRegistry.get_def(&"BloodDefinition", &"sweet") == null, "removing the mod removes its content")
+	_check(_approx(_survival_seconds(ContentRegistry.get_def(&"SunlightProfile", &"default")), core_t, 1.0), "core sunlight is restored")
+
+
+func _survival_seconds(profile: SunlightProfile) -> float:
+	var m := SunlightModel.new(profile)
+	var hp := 100.0
+	var t := 0.0
+	while hp > 0.0 and t < 3000.0:
+		hp -= m.step(0.1, 1.0)
+		t += 0.1
+	return t
+
+
+func _copy_dir(src: String, dst: String) -> void:
+	DirAccess.make_dir_recursive_absolute(dst)
+	var d := DirAccess.open(src)
+	for sub_dir in d.get_directories():
+		_copy_dir("%s/%s" % [src, sub_dir], "%s/%s" % [dst, sub_dir])
+	for f in d.get_files():
+		var name := f.trim_suffix(".remap")
+		var data := FileAccess.get_file_as_bytes("%s/%s" % [src, name])
+		var out := FileAccess.open("%s/%s" % [dst, name], FileAccess.WRITE)
+		out.store_buffer(data)
+		out.close()
+
+
+func _remove_dir(path: String) -> void:
+	var d := DirAccess.open(path)
+	if d == null:
+		return
+	for sub_dir in d.get_directories():
+		_remove_dir("%s/%s" % [path, sub_dir])
+	for f in d.get_files():
+		DirAccess.remove_absolute("%s/%s" % [path, f])
+	DirAccess.remove_absolute(path)

@@ -206,6 +206,8 @@ func _run() -> void:
 	_check(String(mid["label"]).contains("heartbeat") and not String(mid["label"]).contains("Tomas"), "mid: 'a heartbeat' and its rate: %s" % mid["label"])
 	_check(String(near["label"]).contains("stranger") and not String(near["label"]).contains("smoky"), "near: an unknown stranger's mood, no blood yet")
 	_check(String(close["label"]).contains("Aged and smoky"), "close: the blood itself")
+	_check(absf(float(tomas.get_feed_result()["yield"]) - 45.0 * 1.15) < 0.01 and tomas.get_feed_result()["blood_type"] == "Aged", "blood type shapes the yield (Aged x1.15 = %.1f)" % float(tomas.get_feed_result()["yield"]))
+	_check((tomas.get_sense_data(4.0)["color"] as Color).is_equal_approx(ContentRegistry.get_def(&"BloodDefinition", &"aged").sense_color), "Sense colours a calm person by their blood type")
 	tomas.known = true
 	_check(String(tomas.get_sense_data(9.0)["label"]).contains("Tomas Reeve"), "once you know someone, Sense shows their name")
 	HumanNpc.schedules_enabled = true
