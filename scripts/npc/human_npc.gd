@@ -16,6 +16,13 @@ signal mode_changed(new_mode: Mode)
 
 ## Tests/tools can freeze routines: NPCs then stand at their spawn spot.
 static var schedules_enabled := true
+## Which blood-memories the player has already tasted: npc id -> {memory condition: true}. Survives
+## nights (discoveries persist); Vampiric Sense uses it to hint at what is still unheard.
+static var tasted: Dictionary = {}
+
+
+static func reset_tasted() -> void:
+	tasted.clear()
 
 @export var profile: NpcProfile
 @export var close_notice_radius := 2.2
@@ -39,6 +46,7 @@ var trust := 0.0
 var known := false          ## Sense shows their name once you have talked to or fed on them
 var was_afraid_when_grabbed := false
 var was_asleep := false
+var was_trusting := false
 
 var _player: Player
 var _tod: TimeOfDay
@@ -66,6 +74,8 @@ var _stuck_timer := 0.0
 var _stuck_ref := Vector3.ZERO
 var _seed := randf() * 10.0
 var _transform_hooked := false
+var _chill_timer := 0.0
+var _chill_origin := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -253,6 +263,13 @@ func _calm(delta: float) -> void:
 		d = global_position.distance_to(_player.global_position)
 	_update_awareness(delta, d)
 	if mode != Mode.CALM:
+		return
+	# A chill: someone changed shape nearby. They stop, glance toward it, and wonder.
+	if _chill_timer > 0.0:
+		_chill_timer -= delta
+		alert_label.text = "?"
+		_brake(delta)
+		_turn_toward(_chill_origin - global_position, delta, 4.0)
 		return
 	_update_schedule(delta)
 	_woken_timer = maxf(_woken_timer - delta, 0.0)
@@ -564,6 +581,8 @@ func can_be_fed() -> bool:
 func begin_feed(feeder: Node3D) -> void:
 	was_asleep = mode == Mode.SLEEPING
 	was_afraid_when_grabbed = mode == Mode.FLEEING or awareness > 0.6
+	was_trusting = not was_afraid_when_grabbed and not was_asleep \
+		and (mode == Mode.STUNNED or mode == Mode.FOLLOWING or trust_tier() >= 2)
 	_set_mode(Mode.ENTRANCED)
 	known = true
 	_feed_progress = 0.0
@@ -584,11 +603,13 @@ func feed_tick(progress: float) -> void:
 func finish_feed() -> Dictionary:
 	_set_mode(Mode.DRAINED)
 	blood_left = 0.0
+	var result_pre := get_feed_result()
+	_mark_tasted()
 	if not was_asleep:
 		var tw := create_tween().set_parallel(true)
 		tw.tween_property(model.body, "rotation:x", PI * 0.5, 0.9)
 		tw.tween_property(model, "position:y", 0.2, 0.9)
-	return get_feed_result()
+	return result_pre
 
 
 ## Feeding stopped early: they wrench free, dizzy but terrified.
@@ -609,28 +630,94 @@ func interrupt_feed() -> void:
 func feed_condition() -> StringName:
 	if was_asleep:
 		return &"asleep"
-	return &"afraid" if was_afraid_when_grabbed else &"calm"
+	if was_afraid_when_grabbed:
+		return &"afraid"
+	# Trusting victims share the calm memory unless the profile gives them a memory of their own.
+	return &"trusting" if was_trusting and profile.has_memory(&"trusting") else &"calm"
+
+
+## Which FeedStyle this feed plays as (calm / asleep / afraid / trusting).
+func feed_style_id() -> StringName:
+	if was_asleep:
+		return &"asleep"
+	if was_afraid_when_grabbed:
+		return &"afraid"
+	return &"trusting" if was_trusting else &"calm"
+
+
+func feed_style() -> FeedStyle:
+	var st := ContentRegistry.get_def(&"FeedStyle", feed_style_id()) as FeedStyle
+	if st == null:
+		st = ContentRegistry.get_def(&"FeedStyle", &"calm") as FeedStyle
+	return st
+
+
+## The FeedStyle this person would give if you grabbed them right now (for Sense hints).
+func potential_style_id() -> StringName:
+	match mode:
+		Mode.SLEEPING:
+			return &"asleep"
+		Mode.FLEEING:
+			return &"afraid"
+		Mode.STUNNED, Mode.FOLLOWING:
+			return &"trusting"
+	if awareness > 0.6:
+		return &"afraid"
+	return &"trusting" if trust_tier() >= 2 else &"calm"
+
+
+func _memory_condition_for(style_id: StringName) -> StringName:
+	match style_id:
+		&"asleep":
+			return &"asleep"
+		&"afraid":
+			return &"afraid"
+		&"trusting":
+			return &"trusting" if profile.has_memory(&"trusting") else &"calm"
+	return &"calm"
+
+
+func _mark_tasted() -> void:
+	var mem := profile.memory_for(feed_condition())
+	if mem == null:
+		return
+	if not tasted.has(profile.id):
+		tasted[profile.id] = {}
+	tasted[profile.id][mem.condition] = true
+
+
+## True while the memory this person would give in their current state has not been heard yet.
+func has_unheard_memory() -> bool:
+	var mem := profile.memory_for(_memory_condition_for(potential_style_id()))
+	return mem != null and not tasted.get(profile.id, {}).has(mem.condition)
+
+
+func tasted_count() -> int:
+	return tasted.get(profile.id, {}).size()
 
 
 func get_feed_result() -> Dictionary:
 	var memory := profile.memory_for(feed_condition())
-	var note := "Sharp with adrenaline: fear has a flavour."
-	if was_asleep:
-		note = "Slow and sweet, thick with dreams."
-	elif not was_afraid_when_grabbed:
-		note = "Steady and warm; they never saw it coming."
+	var style := feed_style()
+	var blood := profile.blood_definition()
 	return {
 		"name": profile.display_name,
 		"occupation": profile.occupation,
 		"blood": profile.blood_description,
-		"taste_note": note,
+		"taste_note": style.taste_note,
 		"title": memory.title if memory else "Nothing",
 		"memory": memory.text if memory else "",
 		"facts": memory.facts if memory else PackedStringArray(),
 		"reveals": memory.reveals_secret if memory else &"",
 		"condition": feed_condition(),
+		"style": style,
+		"style_id": style.id,
 		"blood_type": _blood_name(),
-		"yield": profile.blood_yield * _yield_multiplier() * (1.25 if was_afraid_when_grabbed else 1.0),
+		"yield": profile.blood_yield * _yield_multiplier() * style.yield_multiplier,
+		"surge_name": style.surge_name,
+		"surge_power": style.surge_power * (blood.surge_power_multiplier if blood else 1.0),
+		"surge_seconds": style.surge_seconds * (blood.surge_seconds_multiplier if blood else 1.0),
+		"first_time": (not tasted.get(profile.id, {}).has(memory.condition)) if memory else false,
 	}
 
 
@@ -644,6 +731,70 @@ func _yield_multiplier() -> float:
 	return b.yield_multiplier if b else 1.0
 
 
+# ---------------------------------------------------------------- reacting to vampiric acts
+
+## Could this person see `point` right now? (Close, or in front of them with a clear line.)
+func _can_see_point(point: Vector3) -> bool:
+	var to := point - global_position
+	to.y = 0.0
+	var d := to.length()
+	if d > 0.05 and d >= 3.0 and (-global_transform.basis.z).dot(to.normalized()) <= -0.2:
+		return false
+	var query := PhysicsRayQueryParameters3D.create(global_position + Vector3(0, 1.6, 0), point + Vector3(0, 1.4, 0), 1)
+	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
+
+
+## Something supernatural happened at `origin` (a feeding, a climb). With `needs_sight` only someone who
+## can see the spot reacts, and they panic; otherwise it is heard: `strength` is the awareness gained by
+## this one call (closer = more, up to `radius`); the caller scales it by how long the noise lasted.
+## Returns true if this person was sent running (or frozen) by it.
+func perceive_vampiric_act(origin: Vector3, strength: float, radius: float, needs_sight: bool) -> bool:
+	if radius <= 0.0 or strength <= 0.0:
+		return false
+	if mode == Mode.DRAINED or mode == Mode.ENTRANCED or mode == Mode.FLEEING:
+		return false
+	var d := global_position.distance_to(origin)
+	if d > radius:
+		return false
+	if mode == Mode.SLEEPING:
+		if not needs_sight:
+			_sleep_noise += strength * (1.0 - d / radius) * profile.light_sleeper
+			if _sleep_noise >= 1.0:
+				_wake_up(true)
+		return false
+	if needs_sight:
+		if not _can_see_point(origin):
+			return false
+		if mode == Mode.FOLLOWING:
+			_stun()
+		else:
+			awareness = 1.0
+			_start_fleeing()
+		return true
+	awareness = minf(awareness + strength * (1.0 - 0.5 * d / radius), 1.0)
+	_turn_toward(origin - global_position, 1.0, 1.0)
+	if awareness >= 1.0:
+		_start_fleeing()
+		return true
+	return false
+
+
+## The air changes when a vampire is born nearby: people who did not see it still feel a chill.
+func feel_transformation(origin: Vector3, to_vampire: bool) -> void:
+	if not to_vampire:
+		return
+	var d := global_position.distance_to(origin)
+	if d > 10.0:
+		return
+	if mode == Mode.SLEEPING:
+		_sleep_noise = minf(_sleep_noise + 0.3 * (1.0 - d / 10.0), 0.95)
+	elif mode == Mode.CALM:
+		awareness = minf(awareness + 0.28 * (1.0 - d / 12.0), 0.4)
+		_chill_timer = 2.2
+		_chill_origin = origin
+		_turn_toward(origin - global_position, 1.0, 1.0)
+
+
 ## A new night: everyone is back on their routine, rested and forgetful.
 func new_day() -> void:
 	trust = 0.0
@@ -651,6 +802,7 @@ func new_day() -> void:
 	_speed_mult = 1.0
 	was_asleep = false
 	was_afraid_when_grabbed = false
+	was_trusting = false
 	snap_to_schedule()
 
 
@@ -691,7 +843,9 @@ func _mood() -> String:
 ## How much you can read from a heartbeat depends on how close you are.
 ##   far   (> 20 m): just the pulse (no text)
 ##   mid   (> 11 m): that a heart is there, and how fast
-##   near  (<= 11 m): who, mood, and (< 7 m) what their blood smells like
+##   near  (<= 11 m): who, mood, and (< 7 m) what their blood smells like, and whether a memory waits
+## `label` is the whole thing as plain text (accessibility, tests); `title` / `detail` / `blood` /
+## `hint` are the same information split for the elegant 3D presentation.
 func get_sense_data(dist := 0.0) -> Dictionary:
 	var bpm := get_heart_rate()
 	var b := profile.blood_definition()
@@ -707,14 +861,44 @@ func get_sense_data(dist := 0.0) -> Dictionary:
 			if awareness > 0.25:
 				col = Color(1.0, 0.2, 0.12)
 	var label := ""
+	var title := ""
+	var detail := ""
+	var blood := ""
+	var hint := ""
 	if dist > 20.0:
 		label = ""
 	elif dist > 11.0:
+		title = "a heartbeat"
+		detail = "%d bpm" % roundi(bpm)
 		label = "a heartbeat, %d bpm" % roundi(bpm)
 	else:
 		var who := profile.display_name if known else "A stranger"
-		label = "%s\n%d bpm, %s" % [who, roundi(bpm), _mood()]
+		title = who
+		detail = "%d bpm, %s" % [roundi(bpm), _mood()]
+		label = "%s\n%s" % [who, detail]
 		if dist < 7.0:
-			label += "\n" + profile.blood_description
+			blood = profile.blood_description
+			label += "\n" + blood
+			if mode != Mode.DRAINED and has_unheard_memory():
+				hint = feed_style_hint()
 	# Lying figures sit low: keep their text near the bed rather than at the ceiling.
-	return {"label": label, "color": col, "bpm": bpm, "label_offset": Vector3(0, 0.7 if is_lying() else 1.9, 0)}
+	return {"label": label, "title": title, "detail": detail, "blood": blood, "hint": hint,
+		"known": known, "tasted": tasted_count(), "color": col, "bpm": bpm, "state": _state_name(),
+		"label_offset": Vector3(0, 0.7 if is_lying() else 1.9, 0)}
+
+
+func feed_style_hint() -> String:
+	var st := ContentRegistry.get_def(&"FeedStyle", potential_style_id()) as FeedStyle
+	return st.sense_hint if st else "a memory waits"
+
+
+## Coarse state for presentation: which heartbeat sound, how the silhouette flickers.
+func _state_name() -> StringName:
+	match mode:
+		Mode.FLEEING, Mode.STUNNED:
+			return &"afraid"
+		Mode.SLEEPING:
+			return &"asleep"
+		Mode.DRAINED:
+			return &"drained"
+	return &"afraid" if awareness > 0.25 else &"calm"

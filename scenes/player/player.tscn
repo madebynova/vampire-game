@@ -12,6 +12,9 @@
 [ext_resource type="Script" path="res://scripts/interaction/interactor.gd" id="11_inter"]
 [ext_resource type="Script" path="res://scripts/player/feeding_controller.gd" id="12_feed"]
 [ext_resource type="Script" path="res://scripts/player/player_feedback.gd" id="13_fb"]
+[ext_resource type="Script" path="res://scripts/player/blood_surge.gd" id="14_surge"]
+[ext_resource type="Script" path="res://scripts/player/traversal_controller.gd" id="15_trav"]
+[ext_resource type="Script" path="res://scripts/player/transform_presentation.gd" id="16_tfx"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.35
@@ -69,6 +72,15 @@ script = ExtResource("11_inter")
 
 [node name="Feeding" type="Node" parent="Components"]
 script = ExtResource("12_feed")
+
+[node name="Surge" type="Node" parent="Components"]
+script = ExtResource("14_surge")
+
+[node name="Traversal" type="Node" parent="Components"]
+script = ExtResource("15_trav")
+
+[node name="TransformFx" type="Node" parent="Components"]
+script = ExtResource("16_tfx")
 
 [node name="Feedback" type="Node" parent="Components"]
 script = ExtResource("13_fb")

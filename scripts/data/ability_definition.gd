@@ -7,8 +7,12 @@ extends ContentDef
 @export var input_action: StringName = &""
 ## Registered as the default key when `input_action` doesn't exist yet (0 = none). Godot Key enum value.
 @export var default_key := 0
+## Registered as the default gamepad button when `input_action` doesn't exist yet (-1 = none). Godot JoyButton value.
+@export var default_joy_button := -1
 @export var toggle := true
 @export var blood_cost_per_sec := 0.0
+## Blood spent once, up front, when the ability is switched on (so flicking it on and off is not free).
+@export var activation_cost := 0.0
 @export var min_blood_to_activate := 0.0
 ## Script extending Ability. Its exported properties may be tuned via `parameters`.
 @export var behavior: Script

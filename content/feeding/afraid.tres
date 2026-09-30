@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="FeedStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/feed_style.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = &"afraid"
+display_name = "Terrified"
+description = "Hot with adrenaline and loud. More blood, more risk."
+yield_multiplier = 1.25
+surge_name = "Fury"
+surge_power = 1.35
+surge_seconds = 32.0
+noise_radius = 17.0
+noise_alarm = 0.6
+witness_radius = 16.0
+camera_shake = 0.012
+feed_volume_db = 0.0
+feed_pitch = 1.15
+haptic_strength = 0.7
+taste_note = "Sharp with adrenaline: fear has a flavour."
+sense_hint = "fear, sharp with memory"
+memory_tint = Color(0.95, 0.12, 0.1, 1)
+memory_fragmentation = 1.0
+memory_bed = &"memory_afraid"
+memory_pace = 1.5
+memory_frame = "It does not arrive. It tears in."

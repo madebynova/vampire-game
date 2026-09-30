@@ -26,16 +26,17 @@ user://mods/<mod>/mod.cfg  optional manifest  (name, version, author, descriptio
 
 | Content | Resource class (`scripts/data/`) | Folder | What it controls |
 |---|---|---|---|
-| Forms | `FormData` | `content/forms/` | speed, jump, look, sun vulnerability + heat multiplier, whether humans fear it, which abilities it may use, night vision floor, blood drain / regen |
-| Abilities | `AbilityDefinition` | `content/abilities/` | id, input action + default key, toggle, blood cost, **the behavior script**, tunable parameters |
+| Forms | `FormData` | `content/forms/` | speed, jump, look, sun vulnerability + heat multiplier, whether humans fear it, which abilities it may use, night vision floor, blood drain / regen, **whether hunger slows it, its resting heartbeat, and which traversal types it may use** |
+| Abilities | `AbilityDefinition` | `content/abilities/` | id, input action + default key **and pad button**, toggle, blood cost per second **and up-front activation cost**, **the behavior script**, tunable parameters |
 | People | `NpcProfile` | `content/npcs/` | look, personality (notice radius, sleep depth, follow), dialogue by trust/night, blood type + description, **blood memories**, **daily schedule** |
 | Blood memories | `BloodMemory` (inside an NPC) | - | what blood tells you, chosen by the victim's state: `calm`, `asleep`, `afraid`, `any`; may reveal a secret |
 | Schedules | `ScheduleEntry` (inside an NPC) | - | hour range, `patrol`/`idle`/`sleep`, route points, bed height, lantern |
-| Blood types | `BloodDefinition` | `content/blood/` | Sense colour, feed-yield multiplier (effects field reserved) |
+| Blood types | `BloodDefinition` | `content/blood/` | Sense colour, feed-yield multiplier, **Bloodrush duration / power multipliers** (effects field reserved) |
+| Feeding styles | `FeedStyle` | `content/feeding/` | **how a feed plays for one victim state** (`calm`, `asleep`, `afraid`, `trusting`, or a new id): yield, Bloodrush power and length, how far the scream carries, how far sight matters, camera shake, feed volume, vibration, taste note, the Sense hint, and the Blood Memory's tint / fragmentation / sound bed / pace / framing line |
 | Sunlight | `SunlightProfile` | `content/sunlight/` | the whole survival curve: stage names, heat thresholds, damage per second, slowdown, cooldown |
 | Sky / time | `DayNightProfile` | `content/time/` | sky, fog, ambient, sun colour, moon and star strength by hour |
-| Locations | `LocationData` + `NpcPlacement` + `SecretPlacement` | `content/locations/` | who lives where, hidden secrets and the flags they set, lamp positions, coffin position |
-| Sounds | `SoundDefinition` | `content/sounds/` | replaces a named sound (`heartbeat`, `bite`, `sense_on`...) with any `AudioStream` |
+| Locations | `LocationData` + `NpcPlacement` + `SecretPlacement` + `TraversalPlacement` | `content/locations/` | who lives where, hidden secrets and the flags they set, lamp positions, coffin position, **designated routes (windows to slip through, walls / roofs to climb) and their prompts** |
+| Sounds | `SoundDefinition` | `content/sounds/` | replaces a named sound with any `AudioStream`: the originals (`heartbeat`, `bite`, `sense_ping`...) **and the Task 1.75 ones** (`transform_vampire`, `transform_human`, `sense_on`, `feed_rush`, `heartbeat_deep`, `heartbeat_sharp`, `memory_calm`, `memory_asleep`, `memory_afraid`, `traverse_window`, `traverse_climb`, `ui_*`...) |
 
 All of these extend `ContentDef` (`id`, `display_name`, `description`). The registry keys them
 by their class name and `id`.
@@ -54,7 +55,16 @@ by their class name and `id`.
 - **Interaction** - anything can be interactable by adding an `Interactable` child; the parent
   may implement `is_interaction_available()` / `get_interaction_prompt()`.
 - **Player systems** - extend `PlayerComponent`, put it under `Player/Components`, and it gets
-  `player` when the scene starts.
+  `player` when the scene starts. (Bloodrush, traversal and the transformation presentation are built this way.)
+- **Bloodrush and ability cost** - `BloodSurge.start(power, seconds, name)` gives a timed boost through the same
+  hooks anything else can use: `Player.speed_modifiers`, `Player.jump_multiplier`, `Ability.cost_modifiers`
+  (multiplies an ability's blood cost; 0 = free), `SunlightExposure.set_heat_modifier`.
+- **Reacting to vampiric acts** - `HumanNpc.perceive_vampiric_act(origin, strength, radius, needs_sight)` is the one
+  door by which anything supernatural (a feeding, a climb) frightens people; `FeedStyle` supplies the numbers.
+- **Traversal** - add a `TraversalPlacement` to a location and list the type in `FormData.traversal`; the
+  prompt, both ends, the Sense presence and the movement are generic (`TraversalLink`, `TraversalController`).
+- **Input** - gameplay reads named actions only. A new ability's `default_key` / `default_joy_button` are registered
+  for you; prompts (`InputGlyph`) show whatever the action is bound to for the device in use.
 
 ## 3. Making a mod today (manual, developer-level)
 
@@ -110,14 +120,21 @@ maths, schedules, memories and ability construction from data.
   replaced as a unit; there is no "patch" that adds one NPC to the existing location. A mod that
   wants to add a person must currently supply its own copy of the location.
 - **New geometry.** Buildings, trees and props are built in code by `WorldBuilder` (greybox). Only
-  positions of NPCs, secrets, lamps and the coffin are data.
+  positions of NPCs, secrets, lamps, the coffin and traversal routes are data. A route can connect any two
+  places that already have room to stand (a mod can add a climb onto an existing roof), but a *new window* needs
+  a hole in the wall, which is code today.
 - **New forms in the player's transform cycle.** Forms load from data, but the cycle (`cycle_ids`)
   and the transformation effects are fixed to Human/Vampire. Wolf/Bat are not implemented.
 - **New abilities from a mod, in practice.** An `AbilityDefinition` can point at any script, but a
   mod-shipped script has to be loadable from `user://` and there is no API stability, docs for the
   `Ability` hooks beyond the source, or UI to show extra abilities.
 - **Items, enemies, quests, dialogue trees, encounters, VFX definitions** - none of these systems
-  exist yet, so there is nothing to mod. (Sounds are moddable; effects are code.)
+  exist yet, so there is nothing to mod. (Sounds and feeding styles are moddable; screen effects, particles and
+  the transformation presentation are code.)
+- **UI.** The HUD, blood vessel, controls screen, pause menu and Blood Memory view are built in code
+  (`scripts/ui/`); only the *content* of a memory (text, facts, style) is data. There is no theming data yet.
+- **Rebinding and input glyph sets.** Everything reads actions, so rebinding is possible later, but there is no UI and
+  the glyph families (keyboard / Xbox / PlayStation) are built in.
 - **Blood effects.** `BloodDefinition.effects` is reserved and ignored.
 - **Save data, mod load order controls, dependency/version checks, conflict UI.** Overrides are
   applied in folder-name order and the last one wins.

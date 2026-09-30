@@ -19,6 +19,7 @@ func _ready() -> void:
 	add_child(main)
 	player = main.player
 	world = main.world
+	_fast_memory()
 	# Deterministic clock: paused at 16:00 unless a test moves it.
 	main.tod.paused = true
 	main.tod.set_hour(16.0)
@@ -119,24 +120,31 @@ func _run() -> void:
 	_check(player.interactor.focused != null, "Elise becomes interactable as the vampire closes in (t=%.2fs, awareness %.2f)" % [t, world.elise.awareness])
 	_check(_prompt().begins_with("Feed"), "Vampire sees 'Feed' prompt: %s" % _prompt())
 	var blood_b4 := player.blood.value
-	Input.action_press(&"interact")
+	Input.action_press(&"feed")
 	await _wait(1.6)
 	_check(player.state.mode == PlayerState.Mode.FEEDING, "state is FEEDING while holding")
 	_check(player.blood.value > blood_b4, "blood rises while feeding")
 	await _shot("06_feeding")
 	await _wait(3.4)
-	Input.action_release(&"interact")
+	Input.action_release(&"feed")
 	await _wait(0.5)
 	_check(world.elise.mode == HumanNpc.Mode.DRAINED, "Elise is drained (alive, unconscious)")
 	_check(player.blood.value > blood_b4 + 20.0, "Blood restored by feeding (%.0f -> %.0f)" % [blood_b4, player.blood.value])
-	_check(main.hud._memory_panel.visible, "Blood memory shown: %s" % main.hud._memory_title.text)
+	# Task 1.75: the memory is a full-screen experience that holds control until dismissed.
+	_check(await _wait_memory(), "Blood memory takes over the screen: %s" % main.memory_view.title_text())
+	await _wait(0.5)
 	await _shot("07_memory")
-	_check(player.state.mode == PlayerState.Mode.NORMAL, "control returns after feeding")
+	_check(player.state.mode == PlayerState.Mode.MEMORY, "control is held while the memory plays")
+	await _dismiss_memory()
+	_check(player.state.mode == PlayerState.Mode.NORMAL, "control returns once the memory is dismissed")
 	_check(player.interactor.focused == null, "a drained victim is no longer interactable (not a pickup)")
-	main.hud._memory_panel.visible = false
 
 	print("[TEST] --- NPC NOTICES A VAMPIRE, FLEES; VAMPIRE OUTRUNS ---")
-	_place(Vector3(4.5, 0, 1.0), 180.0)
+	# Tomas fled earlier (the witnessed transformation) and, with routines frozen, stopped wherever his
+	# run ended. Put him back at his post so this step does not depend on where that happened to be.
+	world.tomas.new_day()
+	# (Start at x=3: the straight line from x=4.5 now runs into the new lamp post beside the plaza.)
+	_place(Vector3(3.0, 0, 1.0), 180.0)
 	_stages_seen.clear()
 	t = 0.0
 	var caught := false
@@ -159,7 +167,7 @@ func _run() -> void:
 	await _shot("08_chase_sun")
 	if caught:
 		var hp0 := player.health.value
-		Input.action_press(&"interact")
+		Input.action_press(&"feed")
 		Input.action_press(&"sprint")
 		Input.action_press(&"move_forward")
 		var lunge := 0.0
@@ -173,13 +181,14 @@ func _run() -> void:
 		_check(player.state.mode == PlayerState.Mode.FEEDING, "seized a fleeing human while sprinting -> FEEDING (lunge %.2fs)" % lunge)
 		await _shot("09_feed_in_sun")
 		await _wait(3.4)
-		Input.action_release(&"interact")
+		Input.action_release(&"feed")
 		await _wait(0.4)
 		_check(not player.state.is_dead(), "survived feeding in open sun (hp %.0f)" % player.health.value)
 		_check(world.tomas.mode == HumanNpc.Mode.DRAINED, "Tomas drained after feed")
-		_check(main.hud._memory_title.text.begins_with("Nine Sets"), "a terrified Tomas gives a DIFFERENT memory (afraid variant): %s" % main.hud._memory_title.text)
+		await _wait_memory()
+		_check(main.memory_view.title_text().begins_with("Nine Sets"), "a terrified Tomas gives a DIFFERENT memory (afraid variant): %s" % main.memory_view.title_text())
 		_check(not world.stash.discovered, "terror blood does not reveal the buried key")
-		main.hud._memory_panel.visible = false
+		await _dismiss_memory()
 
 	print("[TEST] --- SAME PERSON, CALM: A DIFFERENT MEMORY ---")
 	# Deterministic: rested world, calm Tomas, vampire adjacent in the open. (No approach time counted.)
@@ -193,17 +202,18 @@ func _run() -> void:
 	await _run_until_focus(world.tomas.global_position, 3.0)
 	_check(world.tomas.mode == HumanNpc.Mode.CALM and world.tomas.awareness < 0.6, "approached from behind, Tomas has not noticed (awareness %.2f)" % world.tomas.awareness)
 	var hp_sun0 := player.health.value
-	Input.action_press(&"interact")
+	Input.action_press(&"feed")
 	await _wait(4.4)
-	Input.action_release(&"interact")
+	Input.action_release(&"feed")
 	await _wait(0.3)
 	var lost := hp_sun0 - player.health.value
 	# Task 1 asserted "-8..-60 hp" here. With the ~3 minute sun that is obsolete by design: a feed now
 	# costs *heat* (doubled while feeding), not health. Heat is what the coffin/night/shade recover.
 	_check(not player.state.is_dead() and player.sunlight.model.heat > 4.0 and lost < 15.0, "feeding in open sun heats you (heat %.1f, doubled while feeding) but is survivable (-%.0f hp)" % [player.sunlight.model.heat, lost])
-	_check(main.hud._memory_title.text.begins_with("The Well"), "calm Tomas: %s" % main.hud._memory_title.text)
+	await _wait_memory()
+	_check(main.memory_view.title_text().begins_with("The Well"), "calm Tomas: %s" % main.memory_view.title_text())
 	_check(world.stash.discovered, "calm blood revealed the buried key (blood -> information)")
-	main.hud._memory_panel.visible = false
+	await _dismiss_memory()
 
 	print("[TEST] --- SECRET REVEALED BY SENSE, THEN DUG ---")
 	await _run_to(Vector3(3.0, 0, -3.0), 2.0, 6.0)
@@ -230,6 +240,9 @@ func _run() -> void:
 	print("[TEST] --- SUN DEATH (~3 minutes, run at 8x speed) -> COFFIN ---")
 	player.health.revive(1.0)
 	player.sunlight.reset()
+	# The two feeds above left a Bloodrush, which deliberately gives a little patience with the sun
+	# (heat x0.85 at power 1). This step measures the unmodified three-minute baseline, so end it first.
+	player.surge.stop(false)
 	_place(Vector3(14.0, 0, 5.0), 0.0)
 	_stages_seen.clear()
 	Engine.max_physics_steps_per_frame = 64
@@ -274,13 +287,13 @@ func _run() -> void:
 	_check(player.form.is_form(&"vampire"), "transform works again")
 	_place(Vector3(-20.4, 0, 5.5), 90.0)
 	await _run_until_focus(world.elise.global_position, 3.0)
-	Input.action_press(&"interact")
+	Input.action_press(&"feed")
 	await _wait(1.3)
 	_check(player.state.mode == PlayerState.Mode.FEEDING, "feeding started on night 2")
-	Input.action_release(&"interact")
+	Input.action_release(&"feed")
 	await _wait(0.4)
 	_check(world.elise.mode == HumanNpc.Mode.FLEEING, "letting go early: victim tears free, terrified")
-	_check(not main.hud._memory_panel.visible, "no memory from an interrupted feed")
+	_check(not main.memory_view.is_open(), "no memory from an interrupted feed")
 	_check(player.state.mode == PlayerState.Mode.NORMAL, "control returns after interrupt")
 
 	print("[TEST] --- REST IN COFFIN (end the night) ---")
@@ -290,7 +303,7 @@ func _run() -> void:
 	await _wait(0.4)
 	_check(_prompt().begins_with("Sleep"), "Coffin prompt: %s" % _prompt())
 	await _tap(&"interact")
-	await _wait(4.5)
+	await _wait(6.0)   # the lid slides off, you lie down, it closes, the world fades (was 4.5 s before the coffin animation)
 	_check(player.state.mode == PlayerState.Mode.NORMAL, "control returns after resting")
 	_check(world.elise.mode == HumanNpc.Mode.CALM, "resting resets the world (Elise calm again)")
 	_check(player.form.is_form(&"human"), "rest returns you to Human form")
@@ -299,12 +312,13 @@ func _run() -> void:
 	await _become_vampire()
 	_place(Vector3(-20.4, 0, 5.5), 90.0)
 	await _run_until_focus(world.elise.global_position, 3.0)
-	Input.action_press(&"interact")
+	Input.action_press(&"feed")
 	await _wait(4.6)
-	Input.action_release(&"interact")
+	Input.action_release(&"feed")
 	await _wait(0.4)
-	_check(world.elise.mode == HumanNpc.Mode.DRAINED and main.hud._memory_panel.visible, "night 3: Elise fed on again, memory shown")
-	main.hud._memory_panel.visible = false
+	await _wait_memory()
+	_check(world.elise.mode == HumanNpc.Mode.DRAINED and main.memory_view.is_open(), "night 3: Elise fed on again, memory shown")
+	await _dismiss_memory()
 
 	print("[TEST] --- HUMAN FORM IS SAFE IN SUN ---")
 	player.form.set_form_immediate(&"human")

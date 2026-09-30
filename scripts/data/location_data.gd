@@ -8,3 +8,5 @@ extends ContentDef
 @export var secrets: Array[SecretPlacement] = []
 ## Street/yard lamps that come on after dark.
 @export var lamp_positions: PackedVector3Array = PackedVector3Array()
+## Designated routes (windows to slip through, ledges and roofs to climb) only some forms can use.
+@export var traversals: Array[TraversalPlacement] = []

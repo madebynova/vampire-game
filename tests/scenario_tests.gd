@@ -14,6 +14,7 @@ func _ready() -> void:
 	add_child(main)
 	player = main.player
 	world = main.world
+	_fast_memory()
 	main.tod.paused = true
 	await _wait(2.8)
 	await _run()
@@ -36,10 +37,10 @@ func _set_time(h: float) -> void:
 	get_tree().call_group(&"secrets", &"new_day")
 
 
-func _hold_interact(seconds: float) -> void:
-	Input.action_press(&"interact")
+func _hold_feed(seconds: float) -> void:
+	Input.action_press(&"feed")
 	await _wait(seconds)
-	Input.action_release(&"interact")
+	Input.action_release(&"feed")
 
 
 func _in_box(p: Vector3, x0: float, x1: float, z0: float, z1: float) -> bool:
@@ -83,20 +84,21 @@ func _run() -> void:
 	var t := await _run_until_focus(tomas.global_position, 12.0, false)
 	_check(tomas.mode == HumanNpc.Mode.SLEEPING, "a slow, quiet approach does not wake a heavy sleeper (t=%.1fs)" % t)
 	_check(_prompt().contains("asleep"), "prompt: %s" % _prompt())
-	Input.action_press(&"interact")
+	Input.action_press(&"feed")
 	await _wait(2.0)
 	_check(player.state.mode == PlayerState.Mode.FEEDING and tomas.was_asleep, "feeding a sleeper starts (no struggle)")
 	await _shot("s1_feeding_sleeper")
 	_check(player.sunlight.heat_multiplier() >= 2.0, "feeding multiplies sunlight heat (x%.1f)" % player.sunlight.heat_multiplier())
 	await _wait(3.0)
-	Input.action_release(&"interact")
+	Input.action_release(&"feed")
 	await _wait(0.5)
 	_check(tomas.mode == HumanNpc.Mode.DRAINED and tomas.is_lying(), "the sleeper stays in bed, drained")
-	_check(main.hud._memory_title.text == "A Dream of Ink", "asleep blood gives the DREAM memory: %s" % main.hud._memory_title.text)
+	await _wait_memory()
+	_check(main.memory_view.title_text() == "A Dream of Ink", "asleep blood gives the DREAM memory: %s" % main.memory_view.title_text())
 	_check(world.secrets[&"cottage_ledger"].discovered and not world.secrets[&"well_key"].discovered, "the dream revealed the ledger, not the well key")
 	_check(player.sunlight.heat_multiplier() < 1.01, "heat multiplier returns to normal after feeding")
 	_check(player.health.value >= hp0 - 0.01 and player.sunlight.model.heat == 0.0, "night: the vampire takes no sun damage or heat at all")
-	main.hud._close_memory()
+	await _dismiss_memory()
 	# Sense shows the secret; dig it up.
 	_place(Vector3(18.6, 0.0, 18.4), 180.0)
 	await _tap(&"vampiric_sense")
@@ -156,15 +158,16 @@ func _run() -> void:
 	await _wait(0.8)
 	var lunge := await _run_until_focus(tomas.global_position, 2.0)
 	_check(_prompt().begins_with("Feed"), "the stunned follower can be fed on: %s (%.2fs)" % [_prompt(), lunge])
-	Input.action_press(&"interact")
+	Input.action_press(&"feed")
 	await _wait(1.0)
 	_check(player.state.mode == PlayerState.Mode.FEEDING, "seized while stunned")
 	await _wait(3.6)
-	Input.action_release(&"interact")
+	Input.action_release(&"feed")
 	await _wait(0.4)
-	_check(main.hud._memory_title.text.begins_with("The Well"), "trust made him CALM blood: %s" % main.hud._memory_title.text)
+	await _wait_memory()
+	_check(main.memory_view.title_text().begins_with("The Well"), "trust made him CALM blood: %s" % main.memory_view.title_text())
 	_check(world.secrets[&"well_key"].discovered, "calm blood revealed the well key")
-	main.hud._close_memory()
+	await _dismiss_memory()
 
 	_set_time(12.0)
 	player.form.set_form_immediate(&"human")
@@ -253,7 +256,7 @@ func _run() -> void:
 	main.tod.set_hour(0.0)
 	await _wait(0.5)
 	main.hud._update_clock()
-	_check(main.hud._clock.text.contains("Sunrise in") and main.hud._clock.text.contains("Night"), "the HUD counts down to sunrise: %s" % main.hud._clock.text.replace("\n", " | "))
+	_check(main.hud.clock_summary().contains("Sunrise in") and main.hud.clock_summary().contains("Night"), "the HUD counts down to sunrise: %s" % main.hud.clock_summary().replace("\n", " | "))
 
 	print("[SCENARIO] --- HUMAN VS VAMPIRE VISION AT NIGHT ---")
 	player.form.set_form_immediate(&"human")
@@ -274,13 +277,13 @@ func _run() -> void:
 	_place(Vector3(-4.0, 0.0, -11.0), -60.0)
 	var day0 := main.tod.day_count
 	world.coffin.wake(player, &"rest")
-	await _wait(5.0)
+	await _wait(6.5)
 	_check(absf(main.tod.hour - 19.0) < 0.3 and main.tod.day_count == day0, "sleeping by day wakes you at dusk (%s)" % main.tod.clock_text())
 	_check(player.state.mode == PlayerState.Mode.NORMAL and player.form.is_form(&"human"), "you wake as Human, in control")
 	main.tod.set_hour(22.0)
 	day0 = main.tod.day_count
 	world.coffin.wake(player, &"rest")
-	await _wait(5.0)
+	await _wait(6.5)
 	_check(main.tod.day_count == day0 + 1 and absf(main.tod.hour - 19.0) < 0.3, "sleeping at night skips to the NEXT dusk (day %d)" % (main.tod.day_count + 1))
 	HumanNpc.schedules_enabled = true
 	get_tree().call_group(&"npcs", &"new_day")

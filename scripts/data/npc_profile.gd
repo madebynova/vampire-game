@@ -53,6 +53,13 @@ func blood_definition() -> BloodDefinition:
 	return ContentRegistry.get_def(&"BloodDefinition", blood_type) as BloodDefinition
 
 
+func has_memory(condition: StringName) -> bool:
+	for m in memories:
+		if m.condition == condition:
+			return true
+	return false
+
+
 ## Best memory for the victim's state; falls back to &"any", then the first memory.
 func memory_for(condition: StringName) -> BloodMemory:
 	for m in memories:

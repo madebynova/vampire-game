@@ -27,8 +27,10 @@ func _process(delta: float) -> void:
 	var f := player.form.current
 	if f.regen_per_sec <= 0.0:
 		return
-	var want := minf(f.regen_per_sec * delta, max_health - value)
-	if f.regen_blood_cost > 0.0:
+	# A Bloodrush closes wounds twice as fast and for free.
+	var surging := player.surge.active
+	var want := minf(f.regen_per_sec * (2.0 if surging else 1.0) * delta, max_health - value)
+	if f.regen_blood_cost > 0.0 and not surging:
 		var affordable := player.blood.value / f.regen_blood_cost
 		want = minf(want, affordable)
 		if want <= 0.0:

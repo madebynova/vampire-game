@@ -12,7 +12,10 @@ signal transform_finished(form: FormData)
 @export var start_form_id: StringName = &"human"
 ## Forms the transform key cycles through (ids). Wolf/Bat would be appended later.
 @export var cycle_ids: Array[StringName] = [&"human", &"vampire"]
-@export var transform_time := 1.1
+## Whole sequence, in seconds: short enough to stay playable, long enough to be felt.
+@export var transform_time := 1.25
+## Where in the sequence the form actually swaps (the wind-up comes before, the release after).
+@export_range(0.2, 0.8) var swap_fraction := 0.45
 
 var current: FormData
 var _transform_serial := 0
@@ -59,11 +62,11 @@ func request_form(id: StringName) -> void:
 	var serial := _transform_serial
 	player.state.set_mode(PlayerState.Mode.TRANSFORMING)
 	transform_started.emit(target)
-	await get_tree().create_timer(transform_time * 0.5).timeout
+	await get_tree().create_timer(transform_time * swap_fraction).timeout
 	if serial != _transform_serial or player.state.is_dead():
 		return
 	_apply(target)
-	await get_tree().create_timer(transform_time * 0.5).timeout
+	await get_tree().create_timer(transform_time * (1.0 - swap_fraction)).timeout
 	if serial != _transform_serial or player.state.is_dead():
 		return
 	player.state.set_mode(PlayerState.Mode.NORMAL)

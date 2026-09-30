@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="FeedStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/feed_style.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = &"asleep"
+display_name = "Sleeping"
+description = "Quiet, patient, nobody to fight. The richest dreams."
+yield_multiplier = 1.0
+surge_name = "Dreamblood"
+surge_power = 0.8
+surge_seconds = 75.0
+noise_radius = 0.0
+noise_alarm = 0.0
+witness_radius = 6.0
+camera_shake = 0.0
+feed_volume_db = -13.0
+feed_pitch = 0.85
+haptic_strength = 0.2
+taste_note = "Slow and sweet, thick with dreams."
+sense_hint = "a dream waits"
+memory_tint = Color(0.45, 0.5, 0.95, 1)
+memory_fragmentation = 0.0
+memory_bed = &"memory_asleep"
+memory_pace = 0.7
+memory_frame = "You slip into their sleep, and it does not notice you."

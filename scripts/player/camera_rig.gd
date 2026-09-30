@@ -1,7 +1,8 @@
 class_name CameraRig
 extends Node3D
 ## Third-person orbit camera with collision (SpringArm3D), FOV control, shake and a
-## "focus" mode used by feeding.
+## "focus" mode used by feeding. Presentation code (transformation, Sense, feeding, traversal)
+## drives it only through the offsets below - never by touching the camera node directly.
 
 @export var mouse_sensitivity := 0.0024
 @export var stick_speed := 2.8
@@ -19,6 +20,11 @@ var pitch := deg_to_rad(-12.0)
 var base_fov := 68.0
 var fov_boost := 0.0
 var input_enabled := true
+## Additive presentation offsets. Tween them (or call the kick_* helpers); they are added after all
+## smoothing, so a punch feels instant while the base FOV still eases.
+var fov_offset := 0.0
+var roll_offset := 0.0           ## radians
+var distance_offset := 0.0       ## metres; negative = closer
 
 var _target: Node3D
 var _shake := 0.0
@@ -26,6 +32,11 @@ var _focus := false
 var _focus_point := Vector3.ZERO
 var _focus_distance := 2.3
 var _focus_fov := 56.0
+var _fov_kick := 0.0
+var _fov_kick_decay := 6.0
+var _roll_kick := 0.0
+var _roll_kick_decay := 4.0
+var _fov_smooth := -1.0
 
 
 func attach(target: Node3D) -> void:
@@ -58,11 +69,23 @@ func add_shake(amount: float) -> void:
 	_shake = maxf(_shake, amount)
 
 
+## An instant FOV jump that eases back to normal ("camera punch").
+func kick_fov(degrees: float, decay := 6.0) -> void:
+	_fov_kick = degrees
+	_fov_kick_decay = decay
+
+
+func kick_roll(radians: float, decay := 4.0) -> void:
+	_roll_kick = radians
+	_roll_kick_decay = decay
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and input_enabled and not _focus \
 			and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw -= event.relative.x * mouse_sensitivity
-		pitch = clampf(pitch - event.relative.y * mouse_sensitivity, min_pitch, max_pitch)
+		var k := mouse_sensitivity * GameSettings.mouse_sensitivity
+		yaw -= event.relative.x * k
+		pitch = clampf(pitch - event.relative.y * k, min_pitch, max_pitch)
 
 
 func _process(delta: float) -> void:
@@ -78,14 +101,22 @@ func _process(delta: float) -> void:
 		pitch = lerpf(pitch, -0.16, 1.0 - exp(-5.0 * delta))
 	elif input_enabled:
 		var look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
-		yaw -= look.x * stick_speed * delta
-		pitch = clampf(pitch - look.y * stick_speed * delta, min_pitch, max_pitch)
-	rotation = Vector3(pitch, yaw, 0.0)
+		# A gentle response curve: fine aim near the centre, full speed at the edge.
+		look = look.normalized() * pow(look.length(), 1.6)
+		var k := stick_speed * GameSettings.stick_sensitivity * delta
+		yaw -= look.x * k
+		pitch = clampf(pitch - look.y * k, min_pitch, max_pitch)
+	_fov_kick = lerpf(_fov_kick, 0.0, 1.0 - exp(-_fov_kick_decay * delta))
+	_roll_kick = lerpf(_roll_kick, 0.0, 1.0 - exp(-_roll_kick_decay * delta))
+	rotation = Vector3(pitch, yaw, roll_offset + _roll_kick)
 
-	var dist := _focus_distance if _focus else default_distance
+	var dist := (_focus_distance if _focus else default_distance) + distance_offset
 	spring.spring_length = lerpf(spring.spring_length, dist, 1.0 - exp(-5.0 * delta))
-	var fov_goal := _focus_fov if _focus else base_fov + fov_boost
-	camera.fov = lerpf(camera.fov, fov_goal, 1.0 - exp(-6.0 * delta))
+	var fov_goal := (_focus_fov if _focus else base_fov + fov_boost) + fov_offset
+	if _fov_smooth < 0.0:
+		_fov_smooth = camera.fov
+	_fov_smooth = lerpf(_fov_smooth, fov_goal, 1.0 - exp(-6.0 * delta))
+	camera.fov = clampf(_fov_smooth + _fov_kick, 10.0, 140.0)
 
 	if _shake > 0.0005:
 		camera.h_offset = randf_range(-1.0, 1.0) * _shake

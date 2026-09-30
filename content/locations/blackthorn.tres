@@ -1,13 +1,80 @@
-[gd_resource type="Resource" script_class="LocationData" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="LocationData" load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/location_data.gd" id="1_loc"]
 [ext_resource type="Script" path="res://scripts/data/npc_placement.gd" id="2_np"]
 [ext_resource type="Script" path="res://scripts/data/secret_placement.gd" id="3_sp"]
+[ext_resource type="Script" path="res://scripts/data/traversal_placement.gd" id="4_tr"]
+
+[sub_resource type="Resource" id="tr_manor_window"]
+script = ExtResource("4_tr")
+id = &"manor_window"
+type = 0
+a = Vector3(6.2, 0, -4.6)
+b = Vector3(6.2, 0, -7.4)
+prompt_a = "Slip through the window"
+prompt_b = "Slip out through the window"
+sense_label = "Window"
+
+[sub_resource type="Resource" id="tr_cottage_window"]
+script = ExtResource("4_tr")
+id = &"cottage_window"
+type = 0
+a = Vector3(22.1, 0, 13.9)
+b = Vector3(22.1, 0, 16.5)
+prompt_a = "Slip in through the cottage window"
+prompt_b = "Slip out through the window"
+sense_label = "Window"
+
+[sub_resource type="Resource" id="tr_gatehouse_window"]
+script = ExtResource("4_tr")
+id = &"gatehouse_window"
+type = 0
+a = Vector3(-23.35, 0, 0.8)
+b = Vector3(-23.35, 0, 3.6)
+prompt_a = "Slip in through the gatehouse window"
+prompt_b = "Slip out through the window"
+sense_label = "Window"
+
+[sub_resource type="Resource" id="tr_manor_roof"]
+script = ExtResource("4_tr")
+id = &"manor_roof"
+type = 1
+a = Vector3(-5, 0, -4.9)
+b = Vector3(-5, 3.9, -6.8)
+prompt_a = "Climb to the manor roof"
+prompt_b = "Drop down to the yard"
+sense_label = "Roof"
+
+[sub_resource type="Resource" id="tr_ruined_wall"]
+script = ExtResource("4_tr")
+id = &"ruined_wall"
+type = 1
+a = Vector3(18, 0, 12.3)
+b = Vector3(18, 2.6, 11)
+prompt_a = "Climb onto the ruined wall"
+prompt_b = "Drop down to the yard"
+sense_label = "Ledge"
+
+[sub_resource type="Resource" id="tr_cottage_roof"]
+script = ExtResource("4_tr")
+id = &"cottage_roof"
+type = 1
+a = Vector3(25.6, 0, 18)
+b = Vector3(23.3, 3.1, 18)
+prompt_a = "Climb to the cottage roof"
+prompt_b = "Drop down from the roof"
+sense_label = "Roof"
 
 [sub_resource type="Resource" id="np_tomas"]
 script = ExtResource("2_np")
 npc_id = &"tomas"
 position = Vector3(6.5, 0, 11)
+yaw_degrees = 90.0
+
+[sub_resource type="Resource" id="np_corvin"]
+script = ExtResource("2_np")
+npc_id = &"corvin"
+position = Vector3(6.6, 0, 27.6)
 yaw_degrees = 90.0
 
 [sub_resource type="Resource" id="np_elise"]
@@ -41,6 +108,7 @@ script = ExtResource("1_loc")
 id = &"blackthorn"
 display_name = "Blackthorn Estate"
 coffin_position = Vector3(-5.6, 0, -13.2)
-npcs = Array[ExtResource("2_np")]([SubResource("np_tomas"), SubResource("np_elise")])
+npcs = Array[ExtResource("2_np")]([SubResource("np_tomas"), SubResource("np_elise"), SubResource("np_corvin")])
 secrets = Array[ExtResource("3_sp")]([SubResource("sp_key"), SubResource("sp_ledger")])
-lamp_positions = PackedVector3Array(1.2, 0, -4.8, 1.4, 0, 3.5, 1.4, 0, 14, -8, 0, 3.8, -17, 0, 3.8, 9, 0, 9.9, 15.4, 0, 17.2)
+lamp_positions = PackedVector3Array(1, 0, -4.6, 5, 0, 4, 1, 0, 12.5, 5, 0, 21, -8, 0, 3.9, -17.5, 0, 3.9, 8.6, 0, 11.7, 15.4, 0, 17.2)
+traversals = Array[ExtResource("4_tr")]([SubResource("tr_manor_window"), SubResource("tr_cottage_window"), SubResource("tr_gatehouse_window"), SubResource("tr_manor_roof"), SubResource("tr_ruined_wall"), SubResource("tr_cottage_roof")])

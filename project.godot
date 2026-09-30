@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Vampire"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.8", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -19,7 +19,10 @@ config/icon="res://icon.svg"
 
 ContentRegistry="*res://scripts/core/content_registry.gd"
 InputSetup="*res://scripts/core/input_setup.gd"
+GameSettings="*res://scripts/core/game_settings.gd"
 Sfx="*res://scripts/core/sfx.gd"
+Haptics="*res://scripts/core/haptics.gd"
+PauseControl="*res://scripts/core/pause_control.gd"
 
 [display]
 

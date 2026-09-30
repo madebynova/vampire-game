@@ -8,7 +8,17 @@ var failures := 0
 
 
 func _ready() -> void:
+	GameSettings.persist = false     # tests never touch the player's real settings file
 	_test_time_of_day()
+	_test_clock_12h()
+	_test_blood_tuning()
+	_test_input_map()
+	_test_no_hardcoded_devices()
+	_test_feed_styles_and_content()
+	_test_traversal_math()
+	_test_settings_and_audio()
+	_test_feed_style_mod()
+	_test_blood_gauge_polygons()
 	_test_profile_sampling()
 	_test_sunlight_model()
 	_test_registry()
@@ -297,3 +307,270 @@ func _remove_dir(path: String) -> void:
 	for f in d.get_files():
 		DirAccess.remove_absolute("%s/%s" % [path, f])
 	DirAccess.remove_absolute(path)
+
+
+# ---------------------------------------------------------------- Task 1.75: pure logic
+
+func _test_clock_12h() -> void:
+	print("[UNIT] --- 12-hour clock (display only) ---")
+	var cases := {
+		0.0: "12:00 AM", 0.5: "12:30 AM", 1.0: "1:00 AM", 9.25: "9:15 AM", 11.99: "11:59 AM",
+		12.0: "12:00 PM", 12.5: "12:30 PM", 13.25: "1:15 PM", 17.72: "5:43 PM", 23.0: "11:00 PM",
+		23.99: "11:59 PM", 24.0: "12:00 AM", -1.0: "11:00 PM",
+	}
+	for h in cases:
+		_check(TimeOfDay.format_12h(h) == cases[h], "%.2f -> %s (got %s)" % [h, cases[h], TimeOfDay.format_12h(h)])
+	var t := _make_tod(17.72)
+	_check(t.clock_text_12h() == "5:43 PM", "TimeOfDay.clock_text_12h follows the clock: %s" % t.clock_text_12h())
+	_check(t.clock_text() == "17:43" and _approx(t.hour, 17.72, 0.001), "the simulation still runs on 24-hour time (%s, hour %.2f)" % [t.clock_text(), t.hour])
+	t.set_hour(0.0)
+	_check(t.clock_text_12h() == "12:00 AM" and t.clock_text() == "00:00", "midnight is 12:00 AM (internal 00:00)")
+	t.set_hour(12.0)
+	_check(t.clock_text_12h() == "12:00 PM", "noon is 12:00 PM")
+	t.queue_free()
+
+
+func _test_blood_tuning() -> void:
+	print("[UNIT] --- blood: Human slow, Vampire faster, Sense usable ---")
+	var human := ContentRegistry.form(&"human")
+	var vamp := ContentRegistry.form(&"vampire")
+	_check(human.blood_drain_per_sec > 0.0 and human.blood_drain_per_sec <= 0.05, "Human blood drains, but very slowly (%.3f/s)" % human.blood_drain_per_sec)
+	_check(vamp.blood_drain_per_sec >= 0.1 and vamp.blood_drain_per_sec >= human.blood_drain_per_sec * 4.0, "Vampire blood drains clearly faster (%.3f/s vs %.3f/s)" % [vamp.blood_drain_per_sec, human.blood_drain_per_sec])
+	var minutes_full := 100.0 / vamp.blood_drain_per_sec / 60.0
+	_check(minutes_full >= 7.0, "a full vessel lasts a vampire %.1f minutes at rest: background pressure, not a chore" % minutes_full)
+	_check(not human.hunger_slows and vamp.hunger_slows, "hunger slows the Vampire only")
+	var sense := ContentRegistry.get_def(&"AbilityDefinition", &"vampiric_sense") as AbilityDefinition
+	_check(sense.blood_cost_per_sec >= 0.3 and sense.blood_cost_per_sec <= 0.8, "Sense costs blood but is tuned down from 1.4/s (%.2f/s)" % sense.blood_cost_per_sec)
+	_check(sense.activation_cost > 0.0 and sense.activation_cost <= 4.0, "switching Sense on has a small up-front price (%.1f)" % sense.activation_cost)
+	var seconds := 55.0 / (sense.blood_cost_per_sec + vamp.blood_drain_per_sec)
+	_check(seconds >= 60.0, "from the starting 55 blood a player can sense for over a minute (%.0f s)" % seconds)
+
+
+func _test_input_map() -> void:
+	print("[UNIT] --- input map: controller-first, named actions ---")
+	for a in InputSetup.GAMEPLAY_ACTIONS:
+		_check(InputMap.has_action(a) and InputMap.action_get_events(a).size() > 0, "action %s is registered with bindings" % a)
+	var pad_needed: Array[StringName] = [&"move_forward", &"move_back", &"move_left", &"move_right", &"look_up", &"look_down",
+		&"look_left", &"look_right", &"sprint", &"sprint_toggle", &"jump", &"interact", &"feed", &"transform", &"vampiric_sense",
+		&"pause", &"toggle_help", &"memory_dismiss"]
+	for a in pad_needed:
+		var has_pad := false
+		for ev in InputMap.action_get_events(a):
+			if ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+				has_pad = true
+		_check(has_pad, "%s works without a keyboard (pad binding)" % a)
+	var key_needed: Array[StringName] = [&"move_forward", &"move_back", &"move_left", &"move_right", &"sprint", &"jump", &"interact", &"feed",
+		&"transform", &"vampiric_sense", &"pause", &"toggle_help", &"memory_dismiss"]
+	for a in key_needed:
+		var has_key := false
+		for ev in InputMap.action_get_events(a):
+			if ev is InputEventKey:
+				has_key = true
+		_check(has_key, "%s still works on the keyboard" % a)
+	for a in [&"ui_accept", &"ui_cancel", &"ui_up", &"ui_down", &"ui_left", &"ui_right"]:
+		var has_pad_ui := false
+		for ev in InputMap.action_get_events(a):
+			if ev is InputEventJoypadButton or ev is InputEventJoypadMotion:
+				has_pad_ui = true
+		_check(has_pad_ui, "menu action %s is navigable with a pad (A accepts, B backs out, D-pad / stick move)" % a)
+	var all_devices := true
+	for a in InputSetup.GAMEPLAY_ACTIONS:
+		for ev in InputMap.action_get_events(a):
+			if ev.device != -1:
+				all_devices = false
+	_check(all_devices, "every binding matches ANY connected device (second pad, hot-swap)")
+	_check(InputSetup.classify_joypad("Xbox Wireless Controller") == InputSetup.XBOX, "an Xbox pad is Xbox-style")
+	_check(InputSetup.classify_joypad("XInput Gamepad") == InputSetup.XBOX, "an XInput pad is Xbox-style")
+	_check(InputSetup.classify_joypad("GameSir G7 SE") == InputSetup.XBOX, "an unknown Xbox-layout pad falls back to Xbox-style with no special casing")
+	_check(InputSetup.classify_joypad("PS5 Controller") == InputSetup.PLAYSTATION, "a PS5 pad is PlayStation-style")
+	_check(InputSetup.classify_joypad("DualSense Wireless Controller") == InputSetup.PLAYSTATION, "a DualSense is PlayStation-style")
+	var expect := {
+		[&"interact", InputSetup.XBOX]: "X", [&"transform", InputSetup.XBOX]: "Y", [&"jump", InputSetup.XBOX]: "A",
+		[&"vampiric_sense", InputSetup.XBOX]: "LB", [&"pause", InputSetup.XBOX]: "Menu", [&"toggle_help", InputSetup.XBOX]: "View",
+		[&"interact", InputSetup.PLAYSTATION]: "Square", [&"transform", InputSetup.PLAYSTATION]: "Triangle", [&"jump", InputSetup.PLAYSTATION]: "Cross",
+		[&"vampiric_sense", InputSetup.PLAYSTATION]: "L1", [&"pause", InputSetup.PLAYSTATION]: "Options",
+		[&"interact", InputSetup.KEYBOARD]: "E", [&"transform", InputSetup.KEYBOARD]: "F", [&"vampiric_sense", InputSetup.KEYBOARD]: "Q",
+		[&"pause", InputSetup.KEYBOARD]: "Esc", [&"sprint", InputSetup.KEYBOARD]: "Shift",
+	}
+	for k in expect:
+		_check(InputSetup.prompt_text(k[0], k[1]) == expect[k], "%s on %s is %s (got %s)" % [k[0], k[1], expect[k], InputSetup.prompt_text(k[0], k[1])])
+	_check(InputSetup.prompt_text(&"sprint", InputSetup.XBOX) == "RT", "run is on the right trigger (hold), L3 latches it")
+	var latch := InputSetup.bindings_for(&"sprint_toggle", InputSetup.XBOX)
+	_check(not latch.is_empty() and latch[0]["text"] == "L3", "left-stick click is the run latch")
+	_check(InputSetup.prompt_text(&"no_such_action", InputSetup.XBOX) == "?", "an unknown action degrades to a question mark instead of crashing")
+	var before := InputSetup.device_kind
+	InputSetup.set_device_kind(InputSetup.PLAYSTATION)
+	_check(InputSetup.prompt_text(&"interact") == "Square", "prompts follow the last-used device (PlayStation)")
+	InputSetup.set_device_kind(InputSetup.KEYBOARD)
+	_check(InputSetup.prompt_text(&"interact") == "E", "...and switch back to the keyboard")
+	InputSetup.set_device_kind(before)
+
+
+func _script_files(path: String, out: Array) -> void:
+	var d := DirAccess.open(path)
+	if d == null:
+		return
+	for sub in d.get_directories():
+		_script_files("%s/%s" % [path, sub], out)
+	for f in d.get_files():
+		if f.ends_with(".gd"):
+			out.append("%s/%s" % [path, f])
+
+
+func _test_no_hardcoded_devices() -> void:
+	print("[UNIT] --- gameplay reads actions, never devices or keycodes ---")
+	var files: Array = []
+	_script_files("res://scripts", files)
+	var device_hits: Array[String] = []
+	var key_hits: Array[String] = []
+	for f in files:
+		var text := FileAccess.get_file_as_string(f)
+		if text.to_lower().contains("gamesir"):
+			device_hits.append(f)
+		if f.ends_with("input_setup.gd"):
+			continue
+		for needle in ["keycode ==", "KEY_", "JOY_BUTTON_", "JOY_AXIS_", "event.keycode"]:
+			if text.contains(needle):
+				key_hits.append("%s (%s)" % [f, needle])
+	_check(device_hits.is_empty(), "no script names a specific controller model (%d files scanned) %s" % [files.size(), str(device_hits)])
+	_check(key_hits.is_empty(), "no gameplay script hard-codes keys or pad buttons outside InputSetup %s" % str(key_hits))
+
+
+func _test_feed_styles_and_content() -> void:
+	print("[UNIT] --- Task 1.75 content is data ---")
+	for id in [&"calm", &"asleep", &"afraid", &"trusting"]:
+		var st := ContentRegistry.get_def(&"FeedStyle", id) as FeedStyle
+		_check(st != null and st.id == id, "FeedStyle %s is data under content/feeding" % id)
+	var calm := ContentRegistry.get_def(&"FeedStyle", &"calm") as FeedStyle
+	var asleep := ContentRegistry.get_def(&"FeedStyle", &"asleep") as FeedStyle
+	var afraid := ContentRegistry.get_def(&"FeedStyle", &"afraid") as FeedStyle
+	_check(afraid.noise_radius > 0.0 and calm.noise_radius == 0.0 and asleep.noise_radius == 0.0, "only a terrified victim carries a scream")
+	_check(asleep.feed_volume_db < calm.feed_volume_db and calm.feed_volume_db < afraid.feed_volume_db, "sleepers are fed on quietly, screamers loudly (%.0f < %.0f < %.0f dB)" % [asleep.feed_volume_db, calm.feed_volume_db, afraid.feed_volume_db])
+	_check(afraid.yield_multiplier > calm.yield_multiplier and afraid.surge_power > calm.surge_power and afraid.surge_seconds < calm.surge_seconds, "fear pays more, hotter and shorter")
+	_check(asleep.surge_seconds > calm.surge_seconds and asleep.memory_pace < calm.memory_pace, "dreams last longer and are told slowly")
+	_check(afraid.memory_fragmentation > calm.memory_fragmentation and afraid.memory_tint != calm.memory_tint, "a frightened memory looks different: fragmented, its own colour")
+	_check(ContentRegistry.get_def(&"BloodDefinition", &"iron") != null and ContentRegistry.npc(&"corvin") != null, "the night watchman and his iron blood load from content")
+	var corvin := ContentRegistry.npc(&"corvin")
+	_check(corvin.memories.size() == 3 and corvin.memory_for(&"asleep").title == "The Long Road", "Corvin has calm / asleep / afraid blood memories")
+	for p in [ContentRegistry.npc(&"tomas"), ContentRegistry.npc(&"elise"), corvin]:
+		var covered := true
+		var h := 0.0
+		while h < 24.0:
+			covered = covered and p.schedule_for(h) != null
+			h += 0.25
+		_check(covered, "%s has a routine for every hour of the day" % p.display_name)
+	var vamp := ContentRegistry.form(&"vampire")
+	var human := ContentRegistry.form(&"human")
+	_check(vamp.traversal.has("window") and vamp.traversal.has("climb") and human.traversal.is_empty(), "the Vampire can slip through windows and climb; the Human cannot (FormData.traversal)")
+	var loc := ContentRegistry.get_def(&"LocationData", &"blackthorn") as LocationData
+	var types := {}
+	for tr in loc.traversals:
+		types[tr.type] = true
+	_check(loc.traversals.size() >= 5 and types.has(TraversalPlacement.Type.WINDOW) and types.has(TraversalPlacement.Type.CLIMB), "the location lists windows and climbs as data (%d routes)" % loc.traversals.size())
+
+
+func _test_traversal_math() -> void:
+	print("[UNIT] --- traversal paths ---")
+	var loc := ContentRegistry.get_def(&"LocationData", &"blackthorn") as LocationData
+	for p in loc.traversals:
+		var ends_ok := true
+		var continuous := true
+		for from_end in [0, 1]:
+			var s := TraversalController.sample(p, from_end, 0.0)
+			var e := TraversalController.sample(p, from_end, 1.0)
+			ends_ok = ends_ok and s.distance_to(p.end_position(from_end)) < 0.001 and e.distance_to(p.end_position(1 - from_end)) < 0.001
+			var prev := s
+			for i in range(1, 101):
+				var q := TraversalController.sample(p, from_end, i / 100.0)
+				continuous = continuous and q.distance_to(prev) < 0.45
+				prev = q
+		_check(ends_ok, "%s runs exactly from one end to the other, both ways" % p.id)
+		_check(continuous, "%s moves in small steps (no teleport through geometry)" % p.id)
+		_check(p.prompt_a != "" and p.prompt_b != "" and p.end_position(0).distance_to(p.end_position(1)) > 1.5, "%s has prompts for both ends and real length" % p.id)
+		_check(TraversalController.route_duration(p) >= 0.7 and TraversalController.route_duration(p) <= 2.0, "%s takes %.2f s: quick, not a cutscene" % [p.id, TraversalController.route_duration(p)])
+		if p.type == TraversalPlacement.Type.CLIMB:
+			var lo := minf(p.a.y, p.b.y)
+			var never_below := true
+			for i in range(0, 101):
+				never_below = never_below and TraversalController.sample(p, 0 if p.a.y < p.b.y else 1, i / 100.0).y >= lo - 0.01
+			_check(never_below and absf(p.a.y - p.b.y) > 1.5, "%s climbs %.1f m and never dips below the ground" % [p.id, absf(p.a.y - p.b.y)])
+
+
+func _test_settings_and_audio() -> void:
+	print("[UNIT] --- settings and audio buses ---")
+	_check(AudioServer.get_bus_index(AudioBuses.EFFECTS) != -1 and AudioServer.get_bus_index(AudioBuses.AMBIENCE) != -1 and AudioServer.get_bus_index(AudioBuses.MUSIC) != -1, "Effects / Ambience / Music buses exist")
+	AudioBuses.set_muffle(AudioBuses.AMBIENCE, 1.0)
+	_check(AudioBuses.muffle_of(AudioBuses.AMBIENCE) > 0.95, "muffling the world closes the low-pass")
+	AudioBuses.set_muffle(AudioBuses.AMBIENCE, 0.0)
+	_check(AudioBuses.muffle_of(AudioBuses.AMBIENCE) == 0.0, "...and opens it again (effect disabled: no CPU cost)")
+	GameSettings.set_option(&"effects_volume", 0.5)
+	_check(absf(AudioServer.get_bus_volume_db(AudioServer.get_bus_index(AudioBuses.EFFECTS)) - linear_to_db(0.5)) < 0.05, "the Effects slider sets the bus volume")
+	var pulses := Haptics.pulse_count
+	GameSettings.set_option(&"vibration", false)
+	Haptics.pulse(1.0, 1.0, 0.1)
+	_check(Haptics.pulse_count == pulses, "vibration off: no pulse is sent")
+	GameSettings.set_option(&"vibration", true)
+	Haptics.pulse(0.5, 0.5, 0.1)
+	_check(Haptics.pulse_count == pulses + 1, "vibration on: pulses go out")
+	GameSettings.persist = true
+	GameSettings.path = "user://unit_test_settings.cfg"
+	GameSettings.set_option(&"master_volume", 0.33)
+	GameSettings.set_option(&"mouse_sensitivity", 1.75)
+	GameSettings.set_option(&"vibration", false)
+	GameSettings.master_volume = 0.9
+	GameSettings.mouse_sensitivity = 1.0
+	GameSettings.vibration = true
+	GameSettings.load_settings()
+	_check(absf(GameSettings.master_volume - 0.33) < 0.001 and absf(GameSettings.mouse_sensitivity - 1.75) < 0.001 and not GameSettings.vibration, "settings survive a save / load round trip")
+	DirAccess.remove_absolute(GameSettings.path)
+	GameSettings.persist = false
+	GameSettings.path = GameSettings.DEFAULT_PATH
+	GameSettings.reset_defaults()
+	_check(GameSettings.master_volume > 0.5 and GameSettings.vibration and GameSettings.mouse_sensitivity == 1.0, "reset restores defaults")
+	GameSettings.set_option(&"not_a_setting", 1)   # warns, must not crash
+	_check(true, "an unknown option is ignored safely")
+
+
+func _test_feed_style_mod() -> void:
+	print("[UNIT] --- a mod can add and replace feeding styles and routes ---")
+	var base := "user://mods/unit_feed_mod/content/feeding"
+	DirAccess.make_dir_recursive_absolute(base)
+	var drunk := FeedStyle.new()
+	drunk.id = &"drunk"
+	drunk.display_name = "Drunk"
+	drunk.yield_multiplier = 0.7
+	drunk.surge_name = "Borrowed Courage"
+	ResourceSaver.save(drunk, base + "/drunk.tres")
+	var calm_override := FeedStyle.new()
+	calm_override.id = &"calm"
+	calm_override.yield_multiplier = 2.0
+	ResourceSaver.save(calm_override, base + "/calm_override.tres")
+	ContentRegistry.reload()
+	var d := ContentRegistry.get_def(&"FeedStyle", &"drunk") as FeedStyle
+	_check(d != null and d.source == "unit_feed_mod" and d.surge_name == "Borrowed Courage", "a mod adds a new feeding style")
+	_check((ContentRegistry.get_def(&"FeedStyle", &"calm") as FeedStyle).yield_multiplier == 2.0, "a mod replaces a core feeding style by id")
+	_check((ContentRegistry.get_def(&"FeedStyle", &"afraid") as FeedStyle).source == "core", "the rest stay core")
+	DirAccess.remove_absolute(base + "/drunk.tres")
+	DirAccess.remove_absolute(base + "/calm_override.tres")
+	DirAccess.remove_absolute(base)
+	DirAccess.remove_absolute("user://mods/unit_feed_mod/content")
+	DirAccess.remove_absolute("user://mods/unit_feed_mod")
+	ContentRegistry.reload()
+	_check(ContentRegistry.get_def(&"FeedStyle", &"drunk") == null and (ContentRegistry.get_def(&"FeedStyle", &"calm") as FeedStyle).yield_multiplier == 1.0, "removing the mod restores the core styles")
+
+
+func _test_blood_gauge_polygons() -> void:
+	print("[UNIT] --- the blood vessel always draws (polygon sweep) ---")
+	var g := BloodGauge.new()
+	var bad := []
+	var level := 0.0
+	while level <= 1.0001:
+		for amp in [0.0, 2.0, 4.5, 9.0]:
+			for t in [0.0, 0.7, 2.9, 11.3]:
+				g._t = t
+				var pts := g._liquid(level, 48.0, amp)
+				if pts.size() >= 3 and Geometry2D.triangulate_polygon(pts).is_empty():
+					bad.append("%.2f/%.1f/%.1f" % [level, amp, t])
+		level += 0.01
+	_check(bad.is_empty(), "the liquid outline triangulates at every blood level, wave size and time %s" % str(bad.slice(0, 6)))
+	g.free()

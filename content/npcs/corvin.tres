@@ -1,0 +1,76 @@
+[gd_resource type="Resource" script_class="NpcProfile" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_profile.gd" id="1_prof"]
+[ext_resource type="Script" path="res://scripts/data/blood_memory.gd" id="2_mem"]
+[ext_resource type="Script" path="res://scripts/data/schedule_entry.gd" id="3_sch"]
+
+[sub_resource type="Resource" id="mem_calm"]
+script = ExtResource("2_mem")
+condition = &"calm"
+title = "The Lamp Round"
+text = "Nine lamps, counted twice. The wick of the seventh gutters and you trim it without thinking. Behind the manor a door you never saw open stands open, and a cold draught carries lavender and wax.\n\nYou write 'All quiet' in the book, as you always do. It is the fourth night you have lied."
+facts = PackedStringArray("Corvin Hale keeps the night watch.", "He has written 'all quiet' four nights running.", "Someone is using the manor's back door.")
+
+[sub_resource type="Resource" id="mem_asleep"]
+script = ExtResource("2_mem")
+condition = &"asleep"
+title = "The Long Road"
+text = "He sleeps badly by day, as the night-shift do. In the dream the road is longer than it should be and the lamps do not reach its end. There, small and patient, a child waits with a lantern that gives no light.\n\nIt says his name the way the bell says dusk."
+facts = PackedStringArray("Corvin dreams of a child at the end of the road.", "The child's lantern gives no light.")
+
+[sub_resource type="Resource" id="mem_afraid"]
+script = ExtResource("2_mem")
+condition = &"afraid"
+title = "Snuffed"
+text = "Boots. Your own, running. The lamps go out one by one behind you, as if someone were walking the round the other way, pinching each wick in turn.\n\nYou reach the gate. It is locked from the outside."
+facts = PackedStringArray("Corvin is afraid of the lamps going out.", "He believes something walks the round behind him.", "The estate gate is locked from the outside.")
+
+[sub_resource type="Resource" id="sch_sleep"]
+script = ExtResource("3_sch")
+start_hour = 5.5
+end_hour = 15.0
+activity = &"sleep"
+points = PackedVector3Array(5.8, 0, 25.7, 9.2, 0, 25.7, 11.8, 0, 26)
+face_yaw_degrees = 90.0
+rest_height = 0.5
+
+[sub_resource type="Resource" id="sch_idle"]
+script = ExtResource("3_sch")
+start_hour = 15.0
+end_hour = 21.0
+activity = &"idle"
+points = PackedVector3Array(6.6, 0, 27.6)
+face_yaw_degrees = 90.0
+lantern = true
+
+[sub_resource type="Resource" id="sch_patrol"]
+script = ExtResource("3_sch")
+start_hour = 21.0
+end_hour = 5.5
+activity = &"patrol"
+points = PackedVector3Array(3, 0, -3, 3, 0, 8, 3, 0, 18, 3, 0, 27)
+lantern = true
+
+[resource]
+script = ExtResource("1_prof")
+id = &"corvin"
+display_name = "Corvin Hale"
+occupation = "Night watchman"
+skin_color = Color(0.72, 0.56, 0.46, 1)
+cloth_color = Color(0.16, 0.2, 0.3, 1)
+pants_color = Color(0.14, 0.14, 0.17, 1)
+hair_color = Color(0.1, 0.09, 0.09, 1)
+base_heart_rate = 74.0
+notice_radius = 11.0
+night_notice_bonus = 6.0
+light_sleeper = 1.2
+can_follow = false
+greeting_lines = PackedStringArray("Lamps are lit, so mind the road. I walk it till dawn.", "Not a night for strangers. Keep to the light, friend.")
+familiar_lines = PackedStringArray("You again. I sleep by the gate in the daytime, and the less that is said about that the better.")
+trust_lines = PackedStringArray()
+night_lines = PackedStringArray("Halt. Who walks? ...Ah. Forgive me. The dark has me jumping at lamp-posts.", "Nine lamps. Count them with me, if you can't sleep. It helps.")
+blood_type = &"iron"
+blood_description = "Cold iron and lamp-smoke. Vigilance has a taste."
+blood_yield = 40.0
+memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid")])
+schedule = Array[ExtResource("3_sch")]([SubResource("sch_sleep"), SubResource("sch_idle"), SubResource("sch_patrol")])

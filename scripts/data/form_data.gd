@@ -19,7 +19,14 @@ extends ContentDef
 @export var can_feed := false
 ## Ability ids (AbilityDefinition.id) this form is allowed to use.
 @export var abilities: PackedStringArray = PackedStringArray()
+## Background blood use. Humans barely spend any; a vampire burns it noticeably (feeding refills it).
 @export var blood_drain_per_sec := 0.0
+## Low blood slows this form down (hungry x0.85, empty x0.7). Humans shrug it off.
+@export var hunger_slows := false
+## Resting heart rate of the player's own body (drives the HUD blood pulse and heartbeat audio).
+@export var heartbeat_bpm := 66.0
+## Traversal types (TraversalPlacement.type names, lowercase: "window", "climb") this form may use.
+@export var traversal: PackedStringArray = PackedStringArray()
 @export var regen_per_sec := 0.0
 ## Blood spent per point of health regenerated.
 @export var regen_blood_cost := 0.0

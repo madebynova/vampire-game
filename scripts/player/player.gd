@@ -19,13 +19,21 @@ extends CharacterBody3D
 @onready var interactor: Interactor = $Components/Interactor
 @onready var feeding: FeedingController = $Components/Feeding
 @onready var feedback: PlayerFeedback = $Components/Feedback
+@onready var surge: BloodSurge = $Components/Surge
+@onready var traversal: TraversalController = $Components/Traversal
+@onready var transform_fx: TransformPresentation = $Components/TransformFx
 
 ## Multipliers on movement speed keyed by source (sunlight, hunger, ...).
 var speed_modifiers: Dictionary = {}
+## Multiplier on the form's jump (Bloodrush).
+var jump_multiplier := 1.0
 
 var _coyote := 0.0
 var _jump_buffer := 0.0
 var _facing_yaw := 0.0
+var _run_latched := false
+var _latch_idle := 0.0
+var _fall_speed := 0.0
 
 
 func _ready() -> void:
@@ -57,6 +65,11 @@ func face_toward(world_pos: Vector3) -> void:
 		visual.rotation.y = _facing_yaw
 
 
+func set_facing(yaw: float) -> void:
+	_facing_yaw = yaw
+	visual.rotation.y = yaw
+
+
 ## Hard-place the player (spawn, respawn). `yaw` = facing/camera direction.
 func place_at(pos: Vector3, yaw: float) -> void:
 	global_position = pos
@@ -75,7 +88,20 @@ func _physics_process(delta: float) -> void:
 	var input := Vector2.ZERO
 	if can_move:
 		input = Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
-	var running := can_move and Input.is_action_pressed(&"sprint") and input.length() > 0.1
+	var moving := input.length() > 0.1
+	# Run: hold the sprint action, or (pad) click the left stick to latch it until you stop moving.
+	if can_move and Input.is_action_just_pressed(&"sprint_toggle"):
+		_run_latched = not _run_latched
+	if _run_latched:
+		_latch_idle = 0.0 if moving else _latch_idle + delta
+		if _latch_idle > 0.25 or not can_move:
+			_run_latched = false
+	var running := can_move and moving and (Input.is_action_pressed(&"sprint") or _run_latched)
+	if state.mode == PlayerState.Mode.TRAVERSING:
+		# The traversal controller moves the body along its own path; nothing else may push it.
+		velocity = Vector3.ZERO
+		visual.rotation.y = _facing_yaw
+		return
 	var speed := (f.run_speed if running else f.walk_speed) * get_speed_multiplier()
 	var dir := Basis(Vector3.UP, camera_rig.yaw) * Vector3(input.x, 0.0, input.y)
 	if dir.length() > 1.0:
@@ -94,17 +120,26 @@ func _physics_process(delta: float) -> void:
 	else:
 		_jump_buffer = maxf(_jump_buffer - delta, 0.0)
 	if _jump_buffer > 0.0 and _coyote > 0.0:
-		velocity.y = f.jump_velocity
+		velocity.y = f.jump_velocity * jump_multiplier
 		_jump_buffer = 0.0
 		_coyote = 0.0
 
+	_fall_speed = minf(velocity.y, 0.0)
 	move_and_slide()
+	if is_on_floor() and _fall_speed < -7.0:
+		# Landing: a vampire lands like a cat, a human like a person.
+		var soft := form.current.sun_vulnerable
+		Sfx.play(&"land", -14.0 if soft else -7.0, 1.0 if soft else 0.85)
+		_fall_speed = 0.0
 
 	if can_move and dir.length() > 0.1:
 		_facing_yaw = lerp_angle(_facing_yaw, atan2(-dir.x, -dir.z), minf(1.0, turn_speed * delta))
 	visual.rotation.y = _facing_yaw
 	visual.animate(hv.length(), is_on_floor(), delta)
 	var grabbing := state.mode == PlayerState.Mode.FEEDING
-	visual.body.rotation.x = lerpf(visual.body.rotation.x, -0.3 if grabbing else 0.0, minf(1.0, 8.0 * delta))
+	var lean := -0.3 if grabbing else 0.0
+	lean -= 0.32 * visual.pose_amount   # transformation arches the back
+	lean = lerpf(lean, PI * 0.5, visual.lying)
+	visual.body.rotation.x = lerpf(visual.body.rotation.x, lean, minf(1.0, 8.0 * delta))
 	if grabbing:
 		visual.set_arms_forward(1.0)

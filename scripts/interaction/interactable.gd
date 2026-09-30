@@ -29,6 +29,11 @@ func get_prompt(_actor: Player) -> String:
 	return prompt_text
 
 
+## Which input action triggers this (and which glyph the prompt shows). Feeding uses &"feed".
+func get_action(_actor: Player) -> StringName:
+	return &"interact"
+
+
 ## Seconds the key must be held. 0 = instant on press.
 func get_hold_time(_actor: Player) -> float:
 	return 0.0

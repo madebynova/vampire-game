@@ -56,7 +56,7 @@ static func box(parent: Node, center: Vector3, size: Vector3, color: Color, laye
 	shape.size = size
 	cs.shape = shape
 	body.add_child(cs)
-	parent.add_child(body)
+	parent.add_child(body, true)   # readable, unique names: Bench, Bench2, ...
 	return body
 
 

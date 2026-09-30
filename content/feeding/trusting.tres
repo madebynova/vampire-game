@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="FeedStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/feed_style.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = &"trusting"
+display_name = "Trusting"
+description = "They knew you as a person. Then they saw what you are."
+yield_multiplier = 1.1
+surge_name = "Borrowed Warmth"
+surge_power = 1.0
+surge_seconds = 60.0
+noise_radius = 8.0
+noise_alarm = 0.3
+witness_radius = 10.0
+camera_shake = 0.004
+feed_volume_db = -9.0
+feed_pitch = 0.95
+haptic_strength = 0.3
+taste_note = "Warm with misplaced trust. It curdles as they understand."
+sense_hint = "a trusting memory waits"
+memory_tint = Color(0.9, 0.75, 0.55, 1)
+memory_fragmentation = 0.25
+memory_bed = &"memory_calm"
+memory_pace = 0.9
+memory_frame = "They opened the door themselves. Their memory does the same."

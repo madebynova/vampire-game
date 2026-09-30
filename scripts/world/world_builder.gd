@@ -4,13 +4,17 @@ extends Node3D
 ## All layout numbers live here so tuning is one file. Sun travels roughly toward +Z (south),
 ## so shade falls south of tall things; the house door faces south into a sunlit yard.
 ##
-##  north (-Z)
+##  north (-Z)   (pine line behind the manor)
 ##   +----------------------- house (x -8..8, z -16..-6) ----------------------+
 ##   | crypt + coffin (x -8..-2) | hall (x -2..8), broken roof + north windows |
 ##   +--------------------------------- door (x 2..4) ------------------------+
-##      shaded strip           road            sunlit yard, well, Tomas
-##   gatehouse (Elise) far west                trees / graves / ruined wall
-##  south (+Z)
+##      shaded strip      ROAD (x 1.5..4.5) south to the gate        graveyard (NE)
+##   gatehouse (Elise)    paths to the well, the cottage (Tomas), the watch hut (Corvin)
+##  south (+Z)   iron gate in the south wall, z = 30
+##
+## Everything here earns its place: buildings are where people live, paths connect them, lamps
+## stand where people walk, trees frame the estate and give shade at the edges rather than
+## crowding the middle, and each window / ledge that matters is a designated traversal route.
 
 const COFFIN_SCENE := preload("res://scenes/props/coffin.tscn")
 const STASH_SCENE := preload("res://scenes/props/secret_stash.tscn")
@@ -32,11 +36,16 @@ const WALL_H := 3.6
 const WALL_T := 0.4
 
 var coffin: Coffin
+var traversal_links: Array[TraversalLink] = []
+var tree_positions: Array[Vector3] = []
+## Roads and footpaths as XZ rectangles: where people walk (lamps belong beside them, trees do not stand on them).
+var walkways: Array[Rect2] = []
 var location: LocationData
 var npcs: Dictionary = {}     ## id -> HumanNpc
 var secrets: Dictionary = {}  ## id -> SecretStash
 var tomas: HumanNpc
 var elise: HumanNpc
+var corvin: HumanNpc
 var stash: SecretStash        ## the well key (kept for tests/tools)
 
 
@@ -51,30 +60,79 @@ func build() -> void:
 	_house()
 	_gatehouse()
 	_cottage()
+	_hut()
+	_gate()
 	_yard_props()
 	_trees()
 	_graveyard()
 	_boundary()
 	_lamps()
 	_actors()
+	_traversals()
 
 
 # ---------------------------------------------------------------- terrain
 
 func _ground() -> void:
-	Greybox.box(self, Vector3(0, -0.5, 4), Vector3(76, 1, 68), GRASS, Greybox.WORLD, "Ground")
-	# Road from the front door south, and a footpath west to the gatehouse.
-	Greybox.decal(self, Vector3(3, 0.03, 12), Vector3(3.0, 0.05, 36), DIRT)
-	Greybox.decal(self, Vector3(-8, 0.03, 5), Vector3(22, 0.05, 1.6), DIRT)
-	Greybox.decal(self, Vector3(3, 0.035, 3), Vector3(7, 0.05, 6), DIRT.darkened(0.1))
+	Greybox.box(self, Vector3(0, -0.5, 3), Vector3(76, 1, 62), GRASS, Greybox.WORLD, "Ground")
+	# The road runs from the manor door to the estate gate; footpaths branch off it to every place
+	# somebody lives or visits: the gatehouse, the well, the cottage, the graves, the watch hut.
+	_walkway(Vector3(3, 0.03, 11.5), Vector2(3.0, 35), DIRT)
+	_walkway(Vector3(3, 0.035, 3), Vector2(7, 6), DIRT.darkened(0.1))
+	_walkway(Vector3(-8, 0.03, 5), Vector2(22, 1.6), DIRT)
+	_walkway(Vector3(7.0, 0.03, 10.4), Vector2(5, 1.2), DIRT)
+	_walkway(Vector3(10.0, 0.03, 18.4), Vector2(11, 1.3), DIRT)
+	_walkway(Vector3(11.0, 0.03, 0.2), Vector2(13, 1.2), DIRT)
+	_walkway(Vector3(6.3, 0.03, 25.7), Vector2(3.6, 1.4), DIRT)
+
+
+## A strip of trodden earth, remembered as a walkway.
+func _walkway(center: Vector3, size: Vector2, color: Color) -> void:
+	Greybox.decal(self, center, Vector3(size.x, 0.05, size.y), color)
+	walkways.append(Rect2(center.x - size.x * 0.5, center.z - size.y * 0.5, size.x, size.y))
 
 
 func _boundary() -> void:
 	var h := 3.2
 	Greybox.wall(self, Vector2(-34, -22), Vector2(34, -22), h, 1.0, DARK_STONE)
-	Greybox.wall(self, Vector2(-34, 34), Vector2(34, 34), h, 1.0, DARK_STONE)
-	Greybox.wall(self, Vector2(-34, -22), Vector2(-34, 34), h, 1.0, DARK_STONE)
-	Greybox.wall(self, Vector2(34, -22), Vector2(34, 34), h, 1.0, DARK_STONE)
+	# South wall, broken by the gate (see _gate).
+	Greybox.wall(self, Vector2(-34, 30), Vector2(0.5, 30), h, 1.0, DARK_STONE)
+	Greybox.wall(self, Vector2(5.5, 30), Vector2(34, 30), h, 1.0, DARK_STONE)
+	Greybox.wall(self, Vector2(-34, -22), Vector2(-34, 30), h, 1.0, DARK_STONE)
+	Greybox.wall(self, Vector2(34, -22), Vector2(34, 30), h, 1.0, DARK_STONE)
+
+
+# ---------------------------------------------------------------- gate
+
+## The estate's iron gate at the end of the road: closed. Pillars, a hung lantern, a name.
+func _gate() -> void:
+	var z := 30.0
+	for sx in [1.0, 5.0]:
+		Greybox.box(self, Vector3(sx, 1.8, z), Vector3(1.0, 3.6, 1.0), DARK_STONE, Greybox.WORLD, "GatePillar")
+		Greybox.box(self, Vector3(sx, 3.75, z), Vector3(1.35, 0.3, 1.35), STONE, Greybox.WORLD, "GateCap")
+	var iron := Color(0.1, 0.1, 0.12)
+	Greybox.box(self, Vector3(3, 1.3, z), Vector3(3.0, 2.6, 0.12), iron, Greybox.WORLD, "Gate")
+	for i in 5:
+		Greybox.box(self, Vector3(1.75 + i * 0.625, 2.75, z - 0.05), Vector3(0.08, 0.5, 0.08), iron, Greybox.SUN_ONLY, "GateSpike")
+	var sign_label := Label3D.new()
+	sign_label.text = "BLACKTHORN"
+	sign_label.font_size = 64
+	sign_label.pixel_size = 0.008
+	sign_label.outline_size = 10
+	sign_label.modulate = Color(0.82, 0.76, 0.62)
+	sign_label.outline_modulate = Color(0, 0, 0, 0.9)
+	sign_label.position = Vector3(3, 4.5, z - 0.55)
+	sign_label.rotation.y = PI   # read from inside the estate, looking out
+	add_child(sign_label)
+	var lantern := NightLight.new()
+	lantern.position = Vector3(3.0, 3.1, z - 0.9)
+	lantern.night_energy = 1.3
+	lantern.omni_range = 8.0
+	lantern.light_color = Color(1.0, 0.72, 0.4)
+	lantern.shadow_enabled = false
+	add_child(lantern)
+	var head := Greybox.box(self, lantern.position, Vector3(0.26, 0.3, 0.26), Color(1.0, 0.75, 0.4), Greybox.SUN_ONLY, "LampHead")
+	head.get_child(0).material_override = Greybox.material(Color(1.0, 0.75, 0.4), 1.4)
 
 
 # ---------------------------------------------------------------- house
@@ -148,7 +206,8 @@ func _gatehouse() -> void:
 	var z1 := 9.0
 	Greybox.decal(self, Vector3((x0 + x1) * 0.5, 0.04, (z0 + z1) * 0.5), Vector3(8, 0.06, 7), FLOOR)
 	var h := 3.0
-	Greybox.wall(self, Vector2(x0, z0), Vector2(x1, z0), h, WALL_T, STONE.darkened(0.1))
+	# A back window above the bench lets a vampire reach a sleeper unseen.
+	Greybox.wall(self, Vector2(x0, z0), Vector2(x1, z0), h, WALL_T, STONE.darkened(0.1), [{"at": 3.0, "w": 1.3, "y0": 1.0, "y1": 2.2}])
 	Greybox.wall(self, Vector2(x0, z1), Vector2(x1, z1), h, WALL_T, STONE.darkened(0.1))
 	Greybox.wall(self, Vector2(x0, z0), Vector2(x0, z1), h, WALL_T, STONE.darkened(0.1))
 	Greybox.wall(self, Vector2(x1, z0), Vector2(x1, z1), h, WALL_T, STONE.darkened(0.1), [
@@ -189,6 +248,43 @@ func _cottage() -> void:
 	add_child(lamp)
 
 
+# ---------------------------------------------------------------- watch hut (Corvin)
+
+## A one-room hut by the gate where the night watchman sleeps through the day.
+func _hut() -> void:
+	var x0 := 8.0
+	var x1 := 14.0
+	var z0 := 23.0
+	var z1 := 28.0
+	var h := 2.6
+	var stone := STONE.darkened(0.08)
+	Greybox.decal(self, Vector3((x0 + x1) * 0.5, 0.04, (z0 + z1) * 0.5), Vector3(6, 0.06, 5), FLOOR)
+	Greybox.wall(self, Vector2(x0, z0), Vector2(x1, z0), h, WALL_T, stone)
+	Greybox.wall(self, Vector2(x0, z1), Vector2(x1, z1), h, WALL_T, stone)
+	Greybox.wall(self, Vector2(x1, z0), Vector2(x1, z1), h, WALL_T, stone)
+	# Door in the west wall, facing the road (z 24.7 .. 26.7).
+	Greybox.wall(self, Vector2(x0, z0), Vector2(x0, z1), h, WALL_T, stone, [{"at": 1.7, "w": 2.0, "y0": 0.0, "y1": 2.3}])
+	Greybox.box(self, Vector3((x0 + x1) * 0.5, h + 0.15, (z0 + z1) * 0.5), Vector3(6.8, 0.3, 5.8), ROOF, Greybox.WORLD, "Roof")
+	Greybox.box(self, Vector3(11.8, 0.225, 26.0), Vector3(2.0, 0.45, 0.95), WOOD, Greybox.WORLD, "Bed")
+	Greybox.decal(self, Vector3(11.5, 0.5, 26.0), Vector3(1.4, 0.06, 0.85), Color(0.2, 0.25, 0.42))
+	Greybox.box(self, Vector3(9.6, 0.4, 23.9), Vector3(1.2, 0.8, 0.7), DARK_WOOD, Greybox.WORLD, "Table")
+	var lamp := NightLight.new()
+	lamp.position = Vector3(11.0, 2.0, 25.2)
+	lamp.day_energy = 0.3
+	lamp.night_energy = 0.9
+	lamp.omni_range = 6.0
+	lamp.light_color = Color(1.0, 0.7, 0.4)
+	add_child(lamp)
+	# A bracket lantern beside the door, for the watch.
+	var bracket := NightLight.new()
+	bracket.position = Vector3(7.5, 2.2, 27.2)
+	bracket.night_energy = 1.2
+	bracket.omni_range = 7.0
+	bracket.light_color = Color(1.0, 0.72, 0.4)
+	bracket.shadow_enabled = false
+	add_child(bracket)
+
+
 # ---------------------------------------------------------------- yard
 
 func _yard_props() -> void:
@@ -199,31 +295,39 @@ func _yard_props() -> void:
 		Greybox.box(self, well + Vector3(1.05 * sx, 1.5, 0), Vector3(0.18, 3.0, 0.18), DARK_WOOD, Greybox.WORLD, "WellPost")
 	Greybox.box(self, well + Vector3(0, 3.1, 0), Vector3(3.0, 0.25, 2.6), ROOF, Greybox.WORLD, "WellRoof")
 
-	# Tomas' handcart.
-	Greybox.box(self, Vector3(4.6, 0.7, 9.6), Vector3(2.0, 0.6, 1.1), WOOD, Greybox.WORLD, "Cart")
-	Greybox.cylinder(self, Vector3(4.6, 0.4, 10.2), 0.4, 0.1, DARK_WOOD, Greybox.WORLD).rotation.z = PI * 0.5
-	Greybox.cylinder(self, Vector3(4.6, 0.4, 9.0), 0.4, 0.1, DARK_WOOD, Greybox.WORLD).rotation.z = PI * 0.5
+	# Tomas' handcart, parked off the road between the well and the yard.
+	Greybox.box(self, Vector3(9.8, 0.7, 6.4), Vector3(2.0, 0.6, 1.1), WOOD, Greybox.WORLD, "Cart")
+	Greybox.cylinder(self, Vector3(9.8, 0.4, 7.0), 0.4, 0.1, DARK_WOOD, Greybox.WORLD).rotation.z = PI * 0.5
+	Greybox.cylinder(self, Vector3(9.8, 0.4, 5.8), 0.4, 0.1, DARK_WOOD, Greybox.WORLD).rotation.z = PI * 0.5
+	# A bench by the well where people stop to talk, and a woodpile by the cottage door.
+	Greybox.box(self, Vector3(13.3, 0.25, 13.4), Vector3(1.6, 0.5, 0.45), WOOD, Greybox.WORLD, "Bench")
+	Greybox.box(self, Vector3(15.3, 0.28, 20.4), Vector3(0.8, 0.56, 1.5), DARK_WOOD, Greybox.WORLD, "Woodpile")
+	Greybox.box(self, Vector3(15.3, 0.7, 20.4), Vector3(0.6, 0.28, 1.3), WOOD, Greybox.WORLD, "Woodpile")
 
 	# Ruined wall east of the well: a shade pocket to escape into.
 	Greybox.wall(self, Vector2(14, 11), Vector2(22, 11), 2.6, 0.6, DARK_STONE)
 	Greybox.wall(self, Vector2(14, 11), Vector2(14, 8.5), 2.0, 0.6, DARK_STONE)
 
-	# Low garden wall south.
-	Greybox.wall(self, Vector2(-8, 21), Vector2(4, 21), 1.2, 0.5, STONE)
-	# A couple of boulders to break up the yard.
-	Greybox.box(self, Vector3(-4.5, 0.6, 12.5), Vector3(1.6, 1.2, 1.4), DARK_STONE, Greybox.WORLD, "Boulder")
 
 
+## Nine trees, each placed for a reason - none on a road or path, none against a building. A dark
+## line behind the manor (the silhouette you see from the yard), a pair framing the graves, one behind
+## the gatehouse, one beside the cottage, one framing the gate. The middle of the estate stays open.
 func _trees() -> void:
-	var pines := [
-		Vector3(3.0, 0, 5.0), Vector3(-13.0, 0, 8.0), Vector3(-16.0, 0, 13.0), Vector3(-9.0, 0, 15.0),
-		Vector3(-6.0, 0, 3.0), Vector3(24.0, 0, 4.0), Vector3(26.0, 0, 10.0), Vector3(28.0, 0, 15.0),
-		Vector3(29.0, 0, -3.0), Vector3(-26.0, 0, 18.0), Vector3(-20.0, 0, 24.0), Vector3(12.0, 0, 26.0),
-		Vector3(0.0, 0, 27.0), Vector3(-30.0, 0, 8.0), Vector3(30.0, 0, 22.0), Vector3(-2.0, 0, 30.0),
+	var trees := [
+		[Vector3(-2.6, 0, 26.8), 6.5],     # frames the gate from the road
+		[Vector3(-16.0, 0, -19.0), 7.0],   # the pine line behind the manor
+		[Vector3(-22.0, 0, -15.5), 6.0],
+		[Vector3(15.5, 0, -19.0), 6.5],
+		[Vector3(25.5, 0, -14.5), 7.5],
+		[Vector3(26.8, 0, -0.6), 6.5],     # the graves
+		[Vector3(14.6, 0, -3.8), 6.0],
+		[Vector3(-31.0, 0, 7.0), 7.0],     # behind the gatehouse
+		[Vector3(27.0, 0, 23.0), 6.5],     # beside the cottage
 	]
-	var heights := [6.5, 7.0, 6.0, 6.5, 5.5, 7.0, 6.5, 6.0, 7.5, 6.5, 7.0, 6.5, 6.0, 7.0, 6.5, 6.0]
-	for i in pines.size():
-		_pine(pines[i], heights[i])
+	for t in trees:
+		tree_positions.append(t[0])
+		_pine(t[0], t[1])
 
 
 func _pine(base: Vector3, h: float) -> void:
@@ -262,6 +366,16 @@ func _lamps() -> void:
 		add_child(light)
 
 
+# ---------------------------------------------------------------- traversal
+
+func _traversals() -> void:
+	for p in location.traversals:
+		var link := TraversalLink.new()
+		add_child(link)
+		link.setup(p)
+		traversal_links.append(link)
+
+
 # ---------------------------------------------------------------- actors
 
 func _actors() -> void:
@@ -273,6 +387,7 @@ func _actors() -> void:
 		npcs[p.npc_id] = _spawn_npc(profile, p.position, p.yaw_degrees)
 	tomas = npcs.get(&"tomas")
 	elise = npcs.get(&"elise")
+	corvin = npcs.get(&"corvin")
 	for sp in location.secrets:
 		var st := STASH_SCENE.instantiate() as SecretStash
 		st.placement = sp

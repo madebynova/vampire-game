@@ -18,6 +18,15 @@ const CLOTH := Color(0.55, 0.05, 0.1)
 
 var _busy := false
 var _candle_lights: Array[OmniLight3D] = []
+var _lid: Node3D
+var _lid_tween: Tween
+## Observable by tests: 0 = closed (slightly ajar, the resting look), 1 = slid fully open.
+var lid_open := 0.0:
+	set(v):
+		lid_open = v
+		if _lid:
+			_lid.position = Vector3(1.05 * v, 0.64, 0.0)
+			_lid.rotation.y = deg_to_rad(11.0 + 14.0 * v)
 
 
 func _ready() -> void:
@@ -54,6 +63,7 @@ func _build_visuals() -> void:
 	lid.position = Vector3(0.0, 0.64, 0.0)
 	lid.rotation.y = deg_to_rad(11.0)
 	add_child(lid)
+	_lid = lid
 	for s in sections:
 		var size: Vector3 = s[0]
 		var pos: Vector3 = s[1]
@@ -88,6 +98,33 @@ func _build_visuals() -> void:
 		_candle_lights.append(light)
 
 
+## Slide the lid open (1) or shut (0).
+func set_lid(target: float, seconds := 0.5) -> Tween:
+	if _lid_tween:
+		_lid_tween.kill()
+	_lid_tween = create_tween()
+	_lid_tween.tween_property(self, "lid_open", target, seconds).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	return _lid_tween
+
+
+## The short physical beat of going to bed: the lid slides off, you lie down in it, it closes.
+func _lie_down(player: Player) -> void:
+	player.state.set_mode(PlayerState.Mode.RESTING)
+	player.camera_rig.set_focus(global_position + Vector3(0, 0.55, 0), 3.6, 62.0)
+	Sfx.play(&"coffin", -5.0)
+	await set_lid(1.0, 0.45).finished
+	# Lay the body down on its back, head to the candles.
+	player.set_facing(rotation.y + PI)
+	player.visual.lying = 1.0
+	var rest := global_position + Vector3(0, 0.78, 0.85)
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(player.visual, "global_position", rest, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await tw.finished
+	await set_lid(0.0, 0.4).finished
+	player.visual.visible = false
+	player.camera_rig.clear_focus()
+
+
 ## Reset everything a night resets and put the player at the coffin.
 ## kind: &"start" (game launch), &"rest" (player chose to sleep), &"death".
 func wake(player: Player, kind: StringName) -> void:
@@ -98,10 +135,13 @@ func wake(player: Player, kind: StringName) -> void:
 	var hud := get_tree().get_first_node_in_group(&"hud") as Hud
 	if kind != &"start":
 		player.state.set_mode(PlayerState.Mode.RESTING)
+		if kind == &"rest":
+			await _lie_down(player)
 		if fx:
 			await fx.fade_to(1.0, 0.7 if kind == &"rest" else 1.0)
-		Sfx.play(&"coffin", -2.0)
-		await get_tree().create_timer(1.3).timeout
+		if kind != &"rest":
+			Sfx.play(&"coffin", -2.0)
+		await get_tree().create_timer(0.9 if kind == &"rest" else 1.3).timeout
 
 	if kind == &"rest":
 		var tod := get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay
@@ -116,15 +156,21 @@ func wake(player: Player, kind: StringName) -> void:
 	get_tree().call_group(&"npcs", &"new_day")
 	get_tree().call_group(&"secrets", &"new_day")
 	player.place_at(spawn.global_position, spawn_yaw())
+	player.visual.lying = 0.0
+	player.visual.position = Vector3.ZERO
+	lid_open = 0.0
 	if fx and kind == &"start":
 		fx.set_fade(1.0)
 	if fx:
 		await fx.fade_to(0.0, 1.6)
 	player.state.set_mode(PlayerState.Mode.NORMAL)
+	# Waking: the lid has been pushed aside.
+	set_lid(1.0, 0.7)
+	get_tree().create_timer(6.0).timeout.connect(func(): if not _busy: set_lid(0.0, 0.8))
 	if hud:
 		match kind:
 			&"start":
-				hud.toast("You wake in your coffin. Press H for controls.", Color(0.9, 0.8, 0.8), 6.0)
+				hud.toast("You wake in your coffin. Press %s for controls." % InputSetup.prompt_text(&"toggle_help"), Color(0.9, 0.8, 0.8), 6.0)
 			&"rest":
 				hud.toast("You sleep until dusk. The living have forgotten you.", Color(0.8, 0.8, 0.95), 4.5)
 			&"death":

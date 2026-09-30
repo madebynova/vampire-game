@@ -19,6 +19,10 @@ var _mat_eye := StandardMaterial3D.new()
 var _mat_cloak := StandardMaterial3D.new()
 var _phase := 0.0
 var _flare := 0.0
+## 0..1: a "power pose" used by transformation - arms flung wide, torso arched back.
+var pose_amount := 0.0
+## 0..1: lying flat on the back (the coffin).
+var lying := 0.0
 
 
 func _init() -> void:
@@ -174,6 +178,22 @@ func animate(speed: float, on_floor: bool, delta: float) -> void:
 		_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -1.0, delta * 10.0)
 	_flare = lerpf(_flare, clampf(speed * 0.085, 0.0, 0.85), delta * 6.0)
 	_cloak.rotation.x = _flare + (0.5 if not on_floor else 0.0) + sin(_phase * 0.5) * 0.04 * moving
+	if pose_amount > 0.001:
+		_arm_l.rotation.z = lerpf(0.0, -1.25, pose_amount)
+		_arm_r.rotation.z = lerpf(0.0, 1.25, pose_amount)
+		_arm_l.rotation.x = lerpf(_arm_l.rotation.x, -0.3, pose_amount)
+		_arm_r.rotation.x = lerpf(_arm_r.rotation.x, -0.3, pose_amount)
+		_head.rotation.x = lerpf(0.0, 0.35, pose_amount)
+		_cloak.rotation.x = lerpf(_cloak.rotation.x, 0.9, pose_amount)
+	else:
+		_arm_l.rotation.z = 0.0
+		_arm_r.rotation.z = 0.0
+		_head.rotation.x = 0.0
+
+
+## Eye glow strength (transformation flares and fades it).
+func set_eye_energy(v: float) -> void:
+	_mat_eye.emission_energy_multiplier = v
 
 
 ## Arms out in front (feeding grab pose / reaching).

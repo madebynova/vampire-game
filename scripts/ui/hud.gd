@@ -1,40 +1,53 @@
 class_name Hud
 extends CanvasLayer
-## Prototype HUD, built in code. Presentation only: reads player components, never drives them.
-
-const OUTLINE := Color(0, 0, 0, 0.9)
+## The HUD, built in code. Presentation only: reads the player's components, never drives them.
+##
+## Priorities, in order: blood, form, time, immediate danger (sunlight), the interaction prompt.
+## Everything else is quiet. Blood is a living vessel (BloodGauge) with no number; the clock is
+## a 12-hour serif clock with a sun/moon glyph; prompts carry real button glyphs for whichever
+## device you touched last; the controls screen sits on the right and is toggled with H / View.
+## A Blood Memory is not here: MemoryView takes over the whole screen for that.
 
 var player: Player
 
 var _root: Control
+var _gauge: BloodGauge
 var _form_label: Label
 var _tagline: Label
-var _health_bar: ProgressBar
-var _blood_bar: ProgressBar
 var _status_label: Label
+var _surge_label: Label
 var _sense_label: Label
+var _gain_label: Label
 var _sun_box: VBoxContainer
 var _sun_label: Label
 var _sun_bar: ProgressBar
+var _sun_icon: SkyGlyph
 var _prompt_box: VBoxContainer
+var _prompt_row: HBoxContainer
+var _prompt_glyph: InputGlyph
 var _prompt_label: Label
 var _prompt_bar: ProgressBar
 var _toast_label: Label
 var _toast_tween: Tween
 var _banner: Label
-var _help: Label
+var _help: ControlsPanel
 var _debug: Label
 var _clock: Label
+var _clock_sub: Label
+var _clock_extra: Label
+var _sky: SkyGlyph
+var _chips: VBoxContainer
+var _chip_transform: HBoxContainer
+var _chip_sense: HBoxContainer
+var _chip_transform_glyph: InputGlyph
+var _chip_transform_label: Label
+var _chip_sense_label: Label
 var _tod: TimeOfDay
-var _memory_panel: PanelContainer
-var _memory_title: Label
-var _memory_body: Label
-var _memory_meta: Label
-var _memory_time := 0.0
-var _memory_age := 0.0
-var _memory_tween: Tween
-
-signal memory_closed
+var _tagline_tween: Tween
+var _gain_tween: Tween
+var _gain_total := 0.0
+var _gain_hide := 0.0
+var _sense_hint_shown := false
 
 
 func _ready() -> void:
@@ -45,212 +58,299 @@ func _ready() -> void:
 
 # ---------------------------------------------------------------- construction
 
-func _label(text: String, size: int, color := Color.WHITE) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.add_theme_font_size_override(&"font_size", size)
-	l.add_theme_color_override(&"font_color", color)
-	l.add_theme_color_override(&"font_outline_color", OUTLINE)
-	l.add_theme_constant_override(&"outline_size", 6)
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return l
-
-
-func _bar(fill: Color, width := 280.0) -> ProgressBar:
-	var b := ProgressBar.new()
-	b.show_percentage = false
-	b.custom_minimum_size = Vector2(width, 14)
-	b.max_value = 100.0
-	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0, 0, 0, 0.55)
-	bg.set_corner_radius_all(3)
-	var fg := StyleBoxFlat.new()
-	fg.bg_color = fill
-	fg.set_corner_radius_all(3)
-	b.add_theme_stylebox_override(&"background", bg)
-	b.add_theme_stylebox_override(&"fill", fg)
-	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return b
-
-
 func _build() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
 
-	# Top-left: form, vitality, blood.
-	var tl := VBoxContainer.new()
-	tl.position = Vector2(22, 16)
-	tl.add_theme_constant_override(&"separation", 4)
-	_root.add_child(tl)
-	_form_label = _label("HUMAN", 34)
-	tl.add_child(_form_label)
-	_tagline = _label("", 15, Color(0.8, 0.8, 0.8))
-	tl.add_child(_tagline)
-	tl.add_child(_label("VITALITY", 13, Color(0.85, 0.85, 0.85)))
-	_health_bar = _bar(Color(0.85, 0.85, 0.8))
-	tl.add_child(_health_bar)
-	tl.add_child(_label("BLOOD", 13, Color(0.9, 0.5, 0.5)))
-	_blood_bar = _bar(Color(0.75, 0.05, 0.1))
-	tl.add_child(_blood_bar)
-	_status_label = _label("", 15, Color(1.0, 0.6, 0.5))
-	tl.add_child(_status_label)
-	_sense_label = _label("VAMPIRIC SENSE", 18, Color(1.0, 0.25, 0.3))
-	_sense_label.visible = false
-	tl.add_child(_sense_label)
+	# Bottom-left: the vessel, and what it has to say.
+	_gauge = BloodGauge.new()
+	_gauge.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_gauge.offset_left = 10
+	_gauge.offset_top = -206
+	_gauge.offset_right = 200
+	_gauge.offset_bottom = -16
+	_root.add_child(_gauge)
 
-	# Top-centre: sunlight danger.
+	var side := VBoxContainer.new()
+	side.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	side.offset_left = 196
+	side.offset_top = -176
+	side.offset_right = 520
+	side.offset_bottom = -40
+	side.alignment = BoxContainer.ALIGNMENT_END
+	side.add_theme_constant_override(&"separation", 2)
+	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(side)
+	_form_label = UiStyle.label("HUMAN", 30, UiStyle.BONE, true, 6)
+	_form_label.add_theme_font_override(&"font", UiStyle.serif_bold())
+	side.add_child(_form_label)
+	_tagline = UiStyle.label("", 15, UiStyle.BONE_DIM, true, 4)
+	_tagline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tagline.custom_minimum_size = Vector2(300, 0)
+	side.add_child(_tagline)
+	_status_label = UiStyle.label("", 17, Color(1.0, 0.55, 0.45), false, 5)
+	side.add_child(_status_label)
+	_surge_label = UiStyle.label("", 16, UiStyle.GOLD, true, 5)
+	side.add_child(_surge_label)
+	_sense_label = UiStyle.label("", 16, UiStyle.BLOOD_BRIGHT, true, 5)
+	side.add_child(_sense_label)
+	_gain_label = UiStyle.label("", 34, Color(1.0, 0.45, 0.45), true, 7)
+	_gain_label.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_gain_label.offset_left = 62
+	_gain_label.offset_top = -258
+	_gain_label.modulate.a = 0.0
+	_root.add_child(_gain_label)
+
+	# Top-right: the clock.
+	var clock_box := VBoxContainer.new()
+	clock_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	clock_box.offset_left = -330
+	clock_box.offset_right = -24
+	clock_box.offset_top = 14
+	clock_box.add_theme_constant_override(&"separation", 0)
+	clock_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(clock_box)
+	var top := HBoxContainer.new()
+	top.alignment = BoxContainer.ALIGNMENT_END
+	top.add_theme_constant_override(&"separation", 10)
+	clock_box.add_child(top)
+	_sky = SkyGlyph.new()
+	_sky.custom_minimum_size = Vector2(38, 38)
+	top.add_child(_sky)
+	_clock = UiStyle.label("", 38, UiStyle.SUN, true, 6)
+	_clock.add_theme_font_override(&"font", UiStyle.serif_bold())
+	top.add_child(_clock)
+	_clock_sub = UiStyle.label("", 17, UiStyle.BONE_DIM, true, 4)
+	_clock_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	clock_box.add_child(_clock_sub)
+	_clock_extra = UiStyle.label("", 17, UiStyle.BLOOD_BRIGHT, true, 4)
+	_clock_extra.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	clock_box.add_child(_clock_extra)
+
+	# Top-centre: sunlight danger (shown only when it matters).
 	_sun_box = VBoxContainer.new()
 	_sun_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_sun_box.position = Vector2(-220, 18)
-	_sun_box.custom_minimum_size = Vector2(440, 0)
+	_sun_box.offset_left = -230
+	_sun_box.offset_right = 230
+	_sun_box.offset_top = 16
 	_sun_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_sun_box.add_theme_constant_override(&"separation", 4)
+	_sun_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sun_box.visible = false
 	_root.add_child(_sun_box)
-	_sun_label = _label("", 24)
+	var sun_row := HBoxContainer.new()
+	sun_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	sun_row.add_theme_constant_override(&"separation", 8)
+	_sun_box.add_child(sun_row)
+	_sun_icon = SkyGlyph.new()
+	_sun_icon.custom_minimum_size = Vector2(30, 30)
+	_sun_icon.mode = SkyGlyph.Mode.SUN
+	sun_row.add_child(_sun_icon)
+	_sun_label = UiStyle.label("", 22, Color.WHITE, true, 6)
 	_sun_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_sun_box.add_child(_sun_label)
-	_sun_bar = _bar(Color(1.0, 0.7, 0.2), 440.0)
+	sun_row.add_child(_sun_label)
+	_sun_bar = _bar(Color(1.0, 0.7, 0.2), 460.0, 10.0)
 	_sun_box.add_child(_sun_bar)
 
-	# Centre: crosshair.
+	# Centre: a fine dot.
 	var dot := ColorRect.new()
-	dot.color = Color(1, 1, 1, 0.55)
-	dot.custom_minimum_size = Vector2(4, 4)
+	dot.color = Color(1, 1, 1, 0.4)
+	dot.custom_minimum_size = Vector2(3, 3)
 	dot.set_anchors_preset(Control.PRESET_CENTER)
-	dot.position = Vector2(-2, -2)
+	dot.position = Vector2(-1.5, -1.5)
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(dot)
 
-	# Bottom-centre: interaction prompt.
+	# Bottom-centre: the interaction prompt, with a real button glyph.
 	_prompt_box = VBoxContainer.new()
 	_prompt_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_prompt_box.position = Vector2(-200, -170)
-	_prompt_box.custom_minimum_size = Vector2(400, 0)
+	_prompt_box.offset_left = -240
+	_prompt_box.offset_right = 240
+	_prompt_box.offset_top = -176
+	_prompt_box.offset_bottom = -110
 	_prompt_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	_prompt_box.add_theme_constant_override(&"separation", 6)
+	_prompt_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_prompt_box.visible = false
 	_root.add_child(_prompt_box)
-	_prompt_label = _label("", 24)
-	_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_prompt_box.add_child(_prompt_label)
-	_prompt_bar = _bar(Color(0.9, 0.1, 0.15), 400.0)
+	_prompt_row = HBoxContainer.new()
+	_prompt_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_prompt_row.add_theme_constant_override(&"separation", 12)
+	_prompt_box.add_child(_prompt_row)
+	_prompt_glyph = InputGlyph.new(&"interact")
+	_prompt_row.add_child(_prompt_glyph)
+	_prompt_label = UiStyle.label("", 25, UiStyle.BONE, true, 7)
+	_prompt_row.add_child(_prompt_label)
+	_prompt_bar = _bar(Color(0.9, 0.1, 0.15), 320.0, 8.0)
+	_prompt_bar.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_prompt_box.add_child(_prompt_bar)
 
 	# Toast + banner.
-	_toast_label = _label("", 22)
+	_toast_label = UiStyle.label("", 22, Color.WHITE, true, 7)
 	_toast_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_toast_label.position = Vector2(-380, 120)
-	_toast_label.custom_minimum_size = Vector2(760, 0)
+	_toast_label.offset_left = -380
+	_toast_label.offset_right = 380
+	_toast_label.offset_top = 112
 	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_toast_label.modulate.a = 0.0
 	_root.add_child(_toast_label)
 
-	_banner = _label("", 64, Color(0.95, 0.15, 0.15))
+	_banner = UiStyle.label("", 64, Color(0.95, 0.15, 0.15), true, 10)
 	_banner.set_anchors_preset(Control.PRESET_CENTER)
-	_banner.position = Vector2(-450, -60)
-	_banner.custom_minimum_size = Vector2(900, 0)
+	_banner.offset_left = -450
+	_banner.offset_right = 450
+	_banner.offset_top = -60
 	_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.modulate.a = 0.0
 	_root.add_child(_banner)
 
-	# Bottom-left controls.
-	_help = _label(
-		"WASD move    Shift run    Space jump    Mouse look\n"
-		+ "F  transform  (Human <-> Vampire)      Q  Vampiric Sense (Vampire)\n"
-		+ "E  Human: talk - friendly chats build trust, trusting people will follow you\n"
-		+ "E  Vampire: HOLD to feed - sleepers, the unaware and the stunned are easiest\n"
-		+ "Coffin: sleep until dusk.   Sunlight kills slowly - watch the sun and the clock\n"
-		+ "Esc free mouse    H hide this    F3 debug", 15, Color(0.85, 0.85, 0.85))
-	_help.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_help.position = Vector2(22, -152)
+	# Bottom-right: what you can do right now, quietly.
+	_chips = VBoxContainer.new()
+	_chips.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_chips.offset_left = -300
+	_chips.offset_right = -22
+	_chips.offset_top = -132
+	_chips.offset_bottom = -20
+	_chips.alignment = BoxContainer.ALIGNMENT_END
+	_chips.add_theme_constant_override(&"separation", 6)
+	_chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chips.modulate.a = 0.78
+	_root.add_child(_chips)
+	_chip_sense = _chip(&"vampiric_sense", "Vampiric Sense")
+	_chip_sense_label = _chip_sense.get_child(1)
+	_chip_transform = _chip(&"transform", "Become a vampire")
+	_chip_transform_glyph = _chip_transform.get_child(0)
+	_chip_transform_label = _chip_transform.get_child(1)
+	var chip_help := _chip(&"toggle_help", "Controls")
+	chip_help.modulate.a = 0.75
+
+	# The controls screen, on the right.
+	_help = ControlsPanel.new()
+	_help.compact = true   # only the device you are using; the menus show both
+	_help.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_help.offset_left = -424
+	_help.offset_right = -14
+	_help.offset_top = 104
 	_root.add_child(_help)
 
-	_clock = _label("", 22, Color(0.95, 0.9, 0.8))
-	_clock.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_clock.position = Vector2(-250, 14)
-	_clock.custom_minimum_size = Vector2(230, 0)
-	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_root.add_child(_clock)
-
-	_debug = _label("", 14, Color(0.7, 1.0, 0.7))
+	_debug = UiStyle.label("", 14, Color(0.7, 1.0, 0.7), false, 4)
 	_debug.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_debug.position = Vector2(-330, 80)
+	_debug.offset_left = -330
+	_debug.offset_top = 110
 	_debug.visible = false
 	_root.add_child(_debug)
 
-	_build_memory_panel()
+
+func _chip(action: StringName, text: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_END
+	row.add_theme_constant_override(&"separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(InputGlyph.new(action))
+	var l := UiStyle.label(text, 17, UiStyle.BONE, false, 4)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(l)
+	_chips.add_child(row)
+	return row
 
 
-func _build_memory_panel() -> void:
-	_memory_panel = PanelContainer.new()
-	_memory_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_memory_panel.position = Vector2(-340, -190)
-	_memory_panel.custom_minimum_size = Vector2(680, 0)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.1, 0.01, 0.03, 0.88)
-	sb.border_color = Color(0.75, 0.08, 0.14)
-	sb.set_border_width_all(2)
-	sb.set_corner_radius_all(6)
-	sb.set_content_margin_all(22)
-	_memory_panel.add_theme_stylebox_override(&"panel", sb)
-	_memory_panel.visible = false
-	_root.add_child(_memory_panel)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override(&"separation", 10)
-	_memory_panel.add_child(box)
-	box.add_child(_label("BLOOD MEMORY", 14, Color(0.8, 0.3, 0.35)))
-	_memory_title = _label("", 30, Color(1.0, 0.85, 0.85))
-	box.add_child(_memory_title)
-	_memory_body = _label("", 19, Color(0.95, 0.9, 0.9))
-	_memory_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_memory_body.custom_minimum_size = Vector2(630, 0)
-	box.add_child(_memory_body)
-	_memory_meta = _label("", 17, Color(1.0, 0.7, 0.7))
-	_memory_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_memory_meta.custom_minimum_size = Vector2(630, 0)
-	box.add_child(_memory_meta)
-	box.add_child(_label("[E] dismiss", 14, Color(0.7, 0.7, 0.7)))
+func _bar(fill: Color, width: float, height: float) -> ProgressBar:
+	var b := ProgressBar.new()
+	b.show_percentage = false
+	b.custom_minimum_size = Vector2(width, height)
+	b.max_value = 100.0
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0, 0, 0, 0.55)
+	bg.set_corner_radius_all(int(height / 2.0))
+	bg.set_border_width_all(1)
+	bg.border_color = Color(0.6, 0.5, 0.45, 0.35)
+	var fg := StyleBoxFlat.new()
+	fg.bg_color = fill
+	fg.set_corner_radius_all(int(height / 2.0))
+	b.add_theme_stylebox_override(&"background", bg)
+	b.add_theme_stylebox_override(&"fill", fg)
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return b
 
 
 # ---------------------------------------------------------------- binding
 
 func bind(p: Player) -> void:
 	player = p
+	_gauge.bind(p)
 	p.form.form_changed.connect(_on_form_changed)
-	p.blood.changed.connect(func(v, m): _blood_bar.value = v / m * 100.0)
-	p.health.changed.connect(func(v, m): _health_bar.value = v / m * 100.0)
 	p.abilities.ability_denied.connect(func(_a, reason): toast(reason, Color(0.9, 0.75, 0.6), 2.5))
-	p.feeding.feed_completed.connect(_on_feed_completed)
+	p.feeding.feed_started.connect(_on_feed_started)
 	p.feeding.feed_interrupted.connect(func(_n, _pr): toast("You lost your grip. They tear free, terrified.", Color(1.0, 0.6, 0.5), 3.0))
+	p.feeding.witnessed.connect(func(n: int): toast("Someone saw. %s" % ("They run." if n == 1 else "They scatter."), Color(1.0, 0.5, 0.4), 3.5))
+	p.blood.gained.connect(_on_blood_gained)
+	p.surge.started.connect(_on_surge_started)
 	p.health.died.connect(_on_died)
 	p.sunlight.stage_changed.connect(_on_stage_changed)
 	var sense := p.abilities.get_ability(&"vampiric_sense")
 	if sense:
-		sense.activated.connect(func(): _sense_label.visible = true)
-		sense.deactivated.connect(func(): _sense_label.visible = false)
+		sense.activated.connect(_on_sense_on)
 	p.blood.hungry_changed.connect(func(_h): _refresh_status())
-	_health_bar.value = 100.0
-	_blood_bar.value = p.blood.value / p.blood.max_blood * 100.0
 	if p.form.current:
 		_on_form_changed(null, p.form.current)
 
 
-func _on_form_changed(_old: FormData, f: FormData) -> void:
+func _on_form_changed(old: FormData, f: FormData) -> void:
 	_form_label.text = f.display_name.to_upper()
 	_form_label.add_theme_color_override(&"font_color", f.hud_color)
 	_tagline.text = f.tagline
+	_help.refresh_form(f)
+	_chip_sense.visible = f.can_feed
+	_chip_transform_label.text = "Human form" if f.can_feed else "Become a vampire"
 	_refresh_status()
+	if old != null:
+		# The form announces itself, then steps back.
+		_form_label.pivot_offset = Vector2(0, 16)
+		_form_label.scale = Vector2(1.35, 1.35)
+		create_tween().tween_property(_form_label, "scale", Vector2.ONE, 0.6).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		_tagline.modulate.a = 1.0
+		if _tagline_tween:
+			_tagline_tween.kill()
+		_tagline_tween = create_tween()
+		_tagline_tween.tween_interval(4.0)
+		_tagline_tween.tween_property(_tagline, "modulate:a", 0.0, 1.5)
 
 
 func _refresh_status() -> void:
 	if player == null:
 		return
-	if player.form.current.can_feed and player.blood.is_hungry():
-		_status_label.text = "HUNGRY - find a human" if not player.blood.is_empty() else "STARVING - senses failing"
+	if player.blood.is_hungry():
+		_status_label.text = "STARVING" if player.blood.is_starving() else "HUNGRY"
 	else:
 		_status_label.text = ""
+
+
+func _on_feed_started(_npc: HumanNpc) -> void:
+	_gain_total = 0.0
+	_gain_hide = 0.0
+
+
+func _on_blood_gained(amount: float) -> void:
+	if player == null or not player.feeding.is_feeding():
+		return
+	_gain_total += amount
+	_gain_label.text = "+%d" % roundi(_gain_total)
+	_gain_label.modulate.a = 1.0
+	_gain_hide = 2.6
+
+
+func _on_surge_started(info: Dictionary) -> void:
+	if info.get("fresh", true):
+		toast("%s - the blood is in you." % info["name"], UiStyle.GOLD, 3.0)
+
+
+func _on_sense_on() -> void:
+	if not _sense_hint_shown:
+		_sense_hint_shown = true
+		toast("Sense drinks your blood while it runs. Feeding makes it free for a while.", Color(1.0, 0.7, 0.7), 4.0)
 
 
 func _on_stage_changed(stage: int, old: int) -> void:
@@ -273,43 +373,11 @@ func _on_died(_cause: StringName) -> void:
 	tw.tween_interval(1.6)
 	tw.tween_property(_banner, "modulate:a", 0.0, 1.0)
 	_sun_box.visible = false
-	_close_memory()
 
 
-func _on_feed_completed(_npc: HumanNpc, result: Dictionary) -> void:
-	_memory_title.text = result["title"]
-	_memory_body.text = str(result["memory"])
-	var facts: PackedStringArray = result["facts"]
-	var lines := PackedStringArray()
-	lines.append("%s - %s" % [result["name"], result["occupation"]])
-	lines.append("%s blood: %s" % [result["blood_type"], result["blood"]])
-	lines.append("%s   (+%d blood)" % [result["taste_note"], roundi(result["yield"])])
-	for fact in facts:
-		lines.append("Learned: %s" % fact)
-	_memory_meta.text = "
-".join(lines)
-	_memory_panel.visible = true
-	_memory_age = 0.0
-	_memory_time = 24.0
-	Sfx.play(&"memory", -3.0)
-	# The memory surfaces: panel fades in, the recollection is "remembered" letter by letter,
-	# the facts arrive once it has been told.
-	if _memory_tween:
-		_memory_tween.kill()
-	_memory_panel.modulate.a = 0.0
-	_memory_body.visible_ratio = 0.0
-	_memory_meta.modulate.a = 0.0
-	var read_time := clampf(_memory_body.text.length() * 0.026, 1.5, 5.0)
-	_memory_tween = create_tween()
-	_memory_tween.tween_property(_memory_panel, "modulate:a", 1.0, 0.7)
-	_memory_tween.tween_property(_memory_body, "visible_ratio", 1.0, read_time)
-	_memory_tween.tween_property(_memory_meta, "modulate:a", 1.0, 0.6)
-
-
-func _close_memory() -> void:
-	if _memory_panel.visible:
-		_memory_panel.visible = false
-		memory_closed.emit()
+## Hide the whole HUD (a Blood Memory owns the screen).
+func set_dimmed(dimmed: bool) -> void:
+	_root.visible = not dimmed
 
 
 func toast(text: String, color := Color.WHITE, seconds := 3.0) -> void:
@@ -332,16 +400,43 @@ func _process(delta: float) -> void:
 		_help.visible = not _help.visible
 	if Input.is_action_just_pressed(&"toggle_debug"):
 		_debug.visible = not _debug.visible
+	_chips.visible = not _help.visible
 	_update_prompt()
 	_update_sun()
 	_update_clock()
-	if _memory_panel.visible:
-		_memory_age += delta
-		_memory_time -= delta
-		if _memory_time <= 0.0 or (_memory_age > 1.0 and Input.is_action_just_pressed(&"interact")):
-			_close_memory()
+	_update_side(delta)
 	if _debug.visible:
 		_update_debug()
+
+
+## Surge, Sense cost and feed-gain text next to the vessel.
+func _update_side(delta: float) -> void:
+	_refresh_status()
+	var s := player.surge
+	if s.active:
+		var secs := int(ceil(s.seconds_left))
+		_surge_label.text = "%s  %d:%02d" % [s.surge_name, secs / 60, secs % 60]
+	else:
+		_surge_label.text = ""
+	var sense := player.abilities.get_ability(&"vampiric_sense")
+	if sense and sense.active:
+		var cost := sense.current_cost_per_sec()
+		_sense_label.text = "SENSE  free" if cost <= 0.001 else "SENSE  -%.1f blood/s" % cost
+		_chip_sense_label.text = "Sense off"
+	else:
+		_sense_label.text = ""
+		if _chip_sense_label:
+			_chip_sense_label.text = "Vampiric Sense"
+	if _gain_hide > 0.0:
+		_gain_hide -= delta
+		if _gain_hide <= 0.0:
+			_gain_tween = create_tween()
+			_gain_tween.tween_property(_gain_label, "modulate:a", 0.0, 0.8)
+
+
+## Everything about the clock the player can read, as words (tests, accessibility).
+func clock_summary() -> String:
+	return "%s   %s\n%s" % [_clock.text, _clock_sub.text, _clock_extra.text]
 
 
 func _update_clock() -> void:
@@ -349,33 +444,39 @@ func _update_clock() -> void:
 		_tod = get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay
 		if _tod == null:
 			return
-	var phase := String(_tod.phase()).capitalize()
+	var phase := "Daylight" if _tod.phase() == TimeOfDay.DAY else String(_tod.phase()).capitalize()
 	var extra := ""
 	if player.form.current.sun_vulnerable and (_tod.phase() == TimeOfDay.NIGHT or _tod.phase() == TimeOfDay.DAWN):
 		var secs := int(_tod.real_seconds_until(_tod.sunrise_hour()))
 		if _tod.hour < _tod.sunrise_hour() or _tod.hour > 12.0:
-			extra = "
-Sunrise in %d:%02d" % [secs / 60, secs % 60]
-	_clock.text = "Day %d   %s   %s%s" % [_tod.day_count + 1, _tod.clock_text(), phase, extra]
-	var c := Color(1.0, 0.85, 0.6) if _tod.phase() != TimeOfDay.NIGHT else Color(0.7, 0.78, 1.0)
+			extra = "Sunrise in %d:%02d" % [secs / 60, secs % 60]
+	_clock.text = _tod.clock_text_12h()
+	_clock_sub.text = "%s  ·  Day %d" % [phase, _tod.day_count + 1]
+	_clock_extra.text = extra
+	var c := UiStyle.SUN if _tod.phase() != TimeOfDay.NIGHT else UiStyle.MOON
 	_clock.add_theme_color_override(&"font_color", c)
+	_sky.phase = _tod.phase()
+	_sky.queue_redraw()
 
 
 func _update_prompt() -> void:
 	var has_prompt := false
 	if player.feeding.is_feeding():
 		has_prompt = true
-		_prompt_label.text = "Feeding...  keep holding [E]"
+		_prompt_label.text = "Feeding...  keep holding"
+		_prompt_glyph.set_action(&"feed")
 		_prompt_bar.value = player.feeding.progress * 100.0
-	elif player.state.can_act() and player.interactor.focused != null and not _memory_panel.visible:
+		_prompt_bar.visible = true
+	elif player.state.can_act() and player.interactor.focused != null:
 		var it := player.interactor.focused
 		var hold := it.get_hold_time(player) > 0.0
-		_prompt_label.text = "[E]  %s%s" % [it.get_prompt(player), "  (hold)" if hold else ""]
+		_prompt_label.text = "%s%s" % [it.get_prompt(player), "  (hold)" if hold else ""]
+		var act := it.get_action(player)
+		if _prompt_glyph.action != act:
+			_prompt_glyph.set_action(act)
 		_prompt_bar.value = player.interactor.hold_progress * 100.0
 		_prompt_bar.visible = hold
 		has_prompt = true
-	if player.feeding.is_feeding():
-		_prompt_bar.visible = true
 	_prompt_box.visible = has_prompt
 
 
@@ -399,15 +500,20 @@ func _update_sun() -> void:
 	if lit and s.heat_multiplier() > 1.2:
 		title += "   (x%.1f heat)" % s.heat_multiplier()
 	_sun_label.text = title
-	_sun_label.add_theme_color_override(&"font_color", Color(1.0, 0.9, 0.4).lerp(Color(1.0, 0.15, 0.1), f))
+	var col := Color(1.0, 0.9, 0.4).lerp(Color(1.0, 0.15, 0.1), f)
+	_sun_label.add_theme_color_override(&"font_color", col)
+	_sun_icon.tint = col
+	_sun_icon.pulse = f
+	_sun_icon.queue_redraw()
 	var fg := StyleBoxFlat.new()
 	fg.bg_color = Color(1.0, 0.75, 0.25).lerp(Color(1.0, 0.15, 0.1), f)
-	fg.set_corner_radius_all(3)
+	fg.set_corner_radius_all(5)
 	_sun_bar.add_theme_stylebox_override(&"fill", fg)
 
 
 func _update_debug() -> void:
 	var s := player.sunlight
-	_debug.text = "FPS %d\nform %s  state %s\nsun exposure %.2f  meter %.2f  stage %d\nhealth %.0f  blood %.0f\nspeed x%.2f" % [
+	_debug.text = "FPS %d\nform %s  state %s\nsun exposure %.2f  meter %.2f  stage %d\nhealth %.0f  blood %.0f (%.2f/s)  pulse %.0f bpm\nsurge %.2f (%.0fs)  speed x%.2f\nclock %s" % [
 		Engine.get_frames_per_second(), player.form.current.id, PlayerState.Mode.keys()[player.state.mode],
-		s.exposure, s.meter, s.stage, player.health.value, player.blood.value, player.get_speed_multiplier()]
+		s.exposure, s.model.heat, s.stage, player.health.value, player.blood.value, player.blood.spend_rate, player.blood.pulse_rate(),
+		player.surge.intensity(), player.surge.seconds_left, player.get_speed_multiplier(), _tod.clock_text() if _tod else "?"]

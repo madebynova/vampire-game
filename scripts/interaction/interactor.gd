@@ -24,12 +24,13 @@ func _process(delta: float) -> void:
 		hold_progress = 0.0
 		return
 
-	var pressed := Input.is_action_pressed(&"interact")
+	var action := focused.get_action(player)
+	var pressed := Input.is_action_pressed(action)
 	if not pressed:
 		_wait_release = false
 	var hold_time := focused.get_hold_time(player)
 	if hold_time <= 0.0:
-		if Input.is_action_just_pressed(&"interact"):
+		if Input.is_action_just_pressed(action):
 			focused.interact(player)
 		return
 	if pressed and not _wait_release:

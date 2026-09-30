@@ -7,6 +7,8 @@
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="5_hud"]
 [ext_resource type="Script" path="res://scripts/ui/screen_fx.gd" id="6_fx"]
 [ext_resource type="Script" path="res://scripts/world/time_of_day.gd" id="7_tod"]
+[ext_resource type="Script" path="res://scripts/ui/memory_view.gd" id="8_mem"]
+[ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="9_pause"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -42,3 +44,9 @@ script = ExtResource("6_fx")
 
 [node name="HUD" type="CanvasLayer" parent="."]
 script = ExtResource("5_hud")
+
+[node name="MemoryView" type="CanvasLayer" parent="."]
+script = ExtResource("8_mem")
+
+[node name="PauseMenu" type="CanvasLayer" parent="."]
+script = ExtResource("9_pause")

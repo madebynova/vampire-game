@@ -29,6 +29,10 @@ func get_prompt(actor: Player) -> String:
 	return "Talk to %s" % who
 
 
+func get_action(actor: Player) -> StringName:
+	return &"feed" if actor.form.current.can_feed else &"interact"
+
+
 func get_hold_time(actor: Player) -> float:
 	if not actor.form.current.can_feed:
 		return 0.0

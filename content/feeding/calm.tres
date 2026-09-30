@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="FeedStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/feed_style.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = &"calm"
+display_name = "Unaware"
+description = "They never saw it coming. Steady, warm, controlled."
+yield_multiplier = 1.0
+surge_name = "Clear Blood"
+surge_power = 1.0
+surge_seconds = 50.0
+noise_radius = 0.0
+noise_alarm = 0.0
+witness_radius = 12.0
+camera_shake = 0.0
+feed_volume_db = -6.0
+feed_pitch = 1.0
+haptic_strength = 0.35
+taste_note = "Steady and warm; they never saw it coming."
+sense_hint = "a memory waits"
+memory_tint = Color(0.95, 0.72, 0.42, 1)
+memory_fragmentation = 0.0
+memory_bed = &"memory_calm"
+memory_pace = 1.0
+memory_frame = "It arrives quietly, the way a thought does."

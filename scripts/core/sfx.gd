@@ -1,6 +1,8 @@
 extends Node
 ## Procedural prototype audio. No asset files: every sound is synthesised once at startup.
 ## API: Sfx.play(name), Sfx.play_at(name, pos), Sfx.start_loop(name), Sfx.stop_loop(name).
+## Sounds play on the Effects bus; looped ambience and the Blood Memory beds go to the Ambience /
+## Music buses (see AudioBuses). Newer sounds are built lazily from SfxSynth on first use.
 
 const RATE := 22050
 const POOL_2D := 8
@@ -10,6 +12,8 @@ var _streams: Dictionary = {}
 var _pool2d: Array[AudioStreamPlayer] = []
 var _pool3d: Array[AudioStreamPlayer3D] = []
 var _loops: Dictionary = {}
+## name -> [Callable returning PackedFloat32Array, looped, bus]
+var _lazy: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 
 
@@ -18,12 +22,14 @@ func _ready() -> void:
 	_rng.seed = 1337
 	for i in POOL_2D:
 		var p := AudioStreamPlayer.new()
+		p.bus = AudioBuses.EFFECTS
 		add_child(p)
 		_pool2d.append(p)
 	for i in POOL_3D:
 		var p3 := AudioStreamPlayer3D.new()
 		p3.unit_size = 5.0
 		p3.max_distance = 45.0
+		p3.bus = AudioBuses.EFFECTS
 		add_child(p3)
 		_pool3d.append(p3)
 	_build_all()
@@ -31,11 +37,27 @@ func _ready() -> void:
 
 # ---------------------------------------------------------------- playback
 
+func has_sound(sound: StringName) -> bool:
+	return _streams.has(sound) or _lazy.has(sound)
+
+
+## The stream for a name, synthesising it the first time if it is a lazy one.
+func _stream(sound: StringName) -> AudioStream:
+	if _streams.has(sound):
+		return _streams[sound]
+	if _lazy.has(sound):
+		var d: Array = _lazy[sound]
+		_streams[sound] = _to_wav(d[0].call(), d[1])
+		return _streams[sound]
+	return null
+
+
 func play(sound: StringName, volume_db := 0.0, pitch := 1.0) -> AudioStreamPlayer:
-	if not _streams.has(sound):
+	var stream := _stream(sound)
+	if stream == null:
 		return null
 	var player := _free_2d()
-	player.stream = _streams[sound]
+	player.stream = stream
 	player.volume_db = volume_db
 	player.pitch_scale = pitch
 	player.play()
@@ -43,10 +65,11 @@ func play(sound: StringName, volume_db := 0.0, pitch := 1.0) -> AudioStreamPlaye
 
 
 func play_at(sound: StringName, pos: Vector3, volume_db := 0.0, pitch := 1.0) -> AudioStreamPlayer3D:
-	if not _streams.has(sound):
+	var stream := _stream(sound)
+	if stream == null:
 		return null
 	var player := _free_3d()
-	player.stream = _streams[sound]
+	player.stream = stream
 	player.global_position = pos
 	player.volume_db = volume_db
 	player.pitch_scale = pitch
@@ -55,12 +78,14 @@ func play_at(sound: StringName, pos: Vector3, volume_db := 0.0, pitch := 1.0) ->
 
 
 func start_loop(sound: StringName, volume_db := 0.0) -> void:
-	if not _streams.has(sound):
+	var stream := _stream(sound)
+	if stream == null:
 		return
 	var p: AudioStreamPlayer = _loops.get(sound)
 	if p == null:
 		p = AudioStreamPlayer.new()
-		p.stream = _streams[sound]
+		p.stream = stream
+		p.bus = _bus_for(sound)
 		add_child(p)
 		_loops[sound] = p
 	p.volume_db = volume_db
@@ -68,10 +93,29 @@ func start_loop(sound: StringName, volume_db := 0.0) -> void:
 		p.play()
 
 
+func _bus_for(sound: StringName) -> StringName:
+	if _lazy.has(sound):
+		return _lazy[sound][2]
+	if String(sound) in ["wind_loop", "crickets_loop", "birds_loop"]:
+		return AudioBuses.AMBIENCE
+	return AudioBuses.EFFECTS
+
+
+func is_loop_playing(sound: StringName) -> bool:
+	var p: AudioStreamPlayer = _loops.get(sound)
+	return p != null and p.playing
+
+
 func set_loop_volume(sound: StringName, volume_db: float) -> void:
 	var p: AudioStreamPlayer = _loops.get(sound)
 	if p:
 		p.volume_db = volume_db
+
+
+func set_loop_pitch(sound: StringName, pitch: float) -> void:
+	var p: AudioStreamPlayer = _loops.get(sound)
+	if p:
+		p.pitch_scale = pitch
 
 
 func stop_loop(sound: StringName) -> void:
@@ -104,9 +148,7 @@ func _free_3d() -> AudioStreamPlayer3D:
 
 func _build_all() -> void:
 	_streams[&"heartbeat"] = _to_wav(_heartbeat())
-	_streams[&"transform_vampire"] = _to_wav(_transform_vampire())
-	_streams[&"transform_human"] = _to_wav(_transform_human())
-	_streams[&"sense_on"] = _to_wav(_sweep(0.9, 180.0, 1300.0, 0.35, true))
+	_register_lazy()
 	_streams[&"sense_off"] = _to_wav(_sweep(0.5, 900.0, 140.0, 0.3, false))
 	_streams[&"sense_ping"] = _to_wav(_sense_ping())
 	_streams[&"sense_loop"] = _to_wav(_sense_loop(), true)
@@ -130,6 +172,30 @@ func _build_all() -> void:
 	for def: SoundDefinition in ContentRegistry.list(&"SoundDefinition"):
 		if def.stream != null:
 			_streams[def.id] = def.stream
+
+
+## Task 1.75 sounds, built on first use.
+func _register_lazy() -> void:
+	var fx := AudioBuses.EFFECTS
+	var music := AudioBuses.MUSIC
+	_lazy[&"heartbeat_sharp"] = [func(): return SfxSynth.heartbeat(70.0, 130.0, 26.0, 0.2, 0.85, 0.3, 0.7), false, fx]
+	_lazy[&"heartbeat_deep"] = [func(): return SfxSynth.heartbeat(36.0, 62.0, 13.0, 0.34, 0.55, 0.0, 1.0), false, fx]
+	_lazy[&"transform_vampire"] = [SfxSynth.transform_vampire, false, fx]
+	_lazy[&"transform_human"] = [SfxSynth.transform_human, false, fx]
+	_lazy[&"feed_rush"] = [SfxSynth.feed_rush, false, fx]
+	_lazy[&"sense_on"] = [SfxSynth.sense_on, false, fx]
+	_lazy[&"sense_throb"] = [SfxSynth.sense_throb, false, fx]
+	_lazy[&"surge_end"] = [SfxSynth.surge_end, false, fx]
+	_lazy[&"hunger_pang"] = [SfxSynth.hunger_pang, false, fx]
+	_lazy[&"memory_calm"] = [SfxSynth.memory_calm, true, music]
+	_lazy[&"memory_asleep"] = [SfxSynth.memory_asleep, true, music]
+	_lazy[&"memory_afraid"] = [SfxSynth.memory_afraid, true, music]
+	_lazy[&"traverse_window"] = [SfxSynth.traverse_window, false, fx]
+	_lazy[&"traverse_climb"] = [SfxSynth.traverse_climb, false, fx]
+	_lazy[&"land"] = [SfxSynth.land, false, fx]
+	_lazy[&"ui_move"] = [SfxSynth.ui_move, false, fx]
+	_lazy[&"ui_confirm"] = [SfxSynth.ui_confirm, false, fx]
+	_lazy[&"ui_back"] = [SfxSynth.ui_back, false, fx]
 
 
 func _to_wav(samples: PackedFloat32Array, looped := false) -> AudioStreamWAV:
@@ -178,36 +244,6 @@ func _heartbeat() -> PackedFloat32Array:
 				var f := 48.0 + 40.0 * exp(-tt * 28.0)
 				s += sin(TAU * f * tt) * exp(-tt * 20.0) * beat[1]
 		b[i] = s
-	return b
-
-
-func _transform_vampire() -> PackedFloat32Array:
-	var b := _buf(1.6)
-	var ph := 0.0
-	var lp := 0.0
-	for i in b.size():
-		var t := float(i) / RATE
-		var f := 320.0 * exp(-t * 1.8) + 42.0
-		ph += TAU * f / RATE
-		var body := sin(ph) * 0.45 + sin(ph * 0.5) * 0.35
-		lp += (_noise() - lp) * 0.12
-		var flutter := lp * (0.5 + 0.5 * sin(TAU * 13.0 * t)) * clampf(t * 3.0, 0.0, 1.0) * exp(-maxf(t - 0.5, 0.0) * 2.5)
-		var burst := lp * exp(-t * 4.0) * 0.8
-		var env := clampf(t * 40.0, 0.0, 1.0) * clampf((1.6 - t) * 4.0, 0.0, 1.0)
-		b[i] = (body * 0.7 + flutter * 1.3 + burst) * env * 0.7
-	return b
-
-
-func _transform_human() -> PackedFloat32Array:
-	var b := _buf(0.9)
-	var ph := 0.0
-	var lp := 0.0
-	for i in b.size():
-		var t := float(i) / RATE
-		ph += TAU * (90.0 + 260.0 * t) / RATE
-		lp += (_noise() - lp) * 0.2
-		var env := sin(PI * t / 0.9)
-		b[i] = (sin(ph) * 0.35 + lp * 0.3) * env
 	return b
 
 

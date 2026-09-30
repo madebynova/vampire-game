@@ -11,9 +11,13 @@ signal deactivated
 @export var input_action: StringName = &""
 @export var toggle := true
 @export var blood_cost_per_sec := 0.0
+## Spent once when switched on, so flicking an ability on and off is not free.
+@export var activation_cost := 0.0
 @export var min_blood_to_activate := 0.0
 
 var active := false
+## Multipliers on this ability's blood cost keyed by source (Bloodrush makes Sense free).
+var cost_modifiers: Dictionary = {}
 
 
 ## Configure this instance from data (id, cost, key, tunables).
@@ -23,6 +27,7 @@ func apply_definition(def: AbilityDefinition) -> void:
 	input_action = def.input_action
 	toggle = def.toggle
 	blood_cost_per_sec = def.blood_cost_per_sec
+	activation_cost = def.activation_cost
 	min_blood_to_activate = def.min_blood_to_activate
 	for key in def.parameters:
 		set(key, def.parameters[key])
@@ -45,10 +50,24 @@ func _denied_message() -> String:
 	return "You can't do that as a %s." % player.form.current.display_name.to_lower()
 
 
+func cost_multiplier() -> float:
+	var m := 1.0
+	for v in cost_modifiers.values():
+		m *= v
+	return m
+
+
+## Blood per second being spent right now (0 while a modifier makes it free).
+func current_cost_per_sec() -> float:
+	return blood_cost_per_sec * cost_multiplier() if active else 0.0
+
+
 func activate() -> void:
 	if active:
 		return
 	active = true
+	if activation_cost > 0.0:
+		player.blood.take(activation_cost * cost_multiplier())
 	_on_activated()
 	activated.emit()
 
@@ -67,8 +86,9 @@ func _process(delta: float) -> void:
 	if not is_allowed_in_form() or player.state.is_dead():
 		deactivate()
 		return
-	if blood_cost_per_sec > 0.0:
-		player.blood.take(blood_cost_per_sec * delta)
+	var cost := blood_cost_per_sec * cost_multiplier()
+	if cost > 0.0:
+		player.blood.take(cost * delta)
 		if player.blood.is_empty():
 			deactivate()
 			return

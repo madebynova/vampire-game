@@ -136,10 +136,28 @@ func real_seconds_until(target_hour: float) -> float:
 	return hours_until(target_hour) * day_length_seconds / 24.0
 
 
+## Simulation-style 24-hour text ("17:43"). Debug overlays and logs; the player sees clock_text_12h().
 func clock_text() -> String:
 	var h := int(hour)
 	var m := int((hour - h) * 60.0)
 	return "%02d:%02d" % [h, m]
+
+
+## What the player reads: "5:43 PM". Midnight is 12:00 AM, noon is 12:00 PM. Display only - the
+## simulation keeps running on the 24-hour `hour` value.
+func clock_text_12h() -> String:
+	return format_12h(hour)
+
+
+static func format_12h(h24: float) -> String:
+	var t := fposmod(h24, 24.0)
+	var h := int(t)
+	var m := int((t - h) * 60.0)
+	var suffix := "AM" if h < 12 else "PM"
+	var h12 := h % 12
+	if h12 == 0:
+		h12 = 12
+	return "%d:%02d %s" % [h12, m, suffix]
 
 
 ## Hour of the next sunrise / sunset (elevation 0), for HUD hints and scheduling.
