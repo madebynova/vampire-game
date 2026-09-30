@@ -157,16 +157,11 @@ func _build() -> void:
 
 	# Bottom-left controls.
 	_help = _label(
-		"WASD move    Shift run    Space jump    Mouse look
-"
-		+ "F  transform  (Human <-> Vampire)      Q  Vampiric Sense (Vampire)
-"
-		+ "E  Human: talk - friendly chats build trust, trusting people will follow you
-"
-		+ "E  Vampire: HOLD to feed - sleepers, the unaware and the stunned are easiest
-"
-		+ "Coffin: sleep until dusk.   Sunlight kills slowly - watch the sun and the clock
-"
+		"WASD move    Shift run    Space jump    Mouse look\n"
+		+ "F  transform  (Human <-> Vampire)      Q  Vampiric Sense (Vampire)\n"
+		+ "E  Human: talk - friendly chats build trust, trusting people will follow you\n"
+		+ "E  Vampire: HOLD to feed - sleepers, the unaware and the stunned are easiest\n"
+		+ "Coffin: sleep until dusk.   Sunlight kills slowly - watch the sun and the clock\n"
 		+ "Esc free mouse    H hide this    F3 debug", 15, Color(0.85, 0.85, 0.85))
 	_help.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_help.position = Vector2(22, -152)

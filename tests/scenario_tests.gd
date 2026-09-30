@@ -286,3 +286,16 @@ func _run() -> void:
 	get_tree().call_group(&"npcs", &"new_day")
 	await _wait(0.5)
 	_check(tomas.mode == HumanNpc.Mode.CALM and tomas.global_position.z > 5.0, "the world is on its dusk routine after sleeping")
+
+	print("[SCENARIO] --- SHOWCASE (screenshots only) ---")
+	HumanNpc.schedules_enabled = true
+	_set_time(22.0)
+	player.form.set_form_immediate(&"vampire")
+	_place(Vector3(-10.0, 0.0, 6.5), 90.0)
+	await _tap(&"vampiric_sense")
+	await _wait(3.0)
+	await _shot("s7_night_sense_far")
+	_place(Vector3(-14.0, 0.0, 5.5), 90.0)
+	await _wait(1.0)
+	await _shot("s8_night_sense_near")
+	await _tap(&"vampiric_sense")
