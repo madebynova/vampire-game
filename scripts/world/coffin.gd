@@ -127,7 +127,7 @@ func wake(player: Player, kind: StringName) -> void:
 
 
 # Vampiric Sense hooks: home calls to you.
-func get_sense_data() -> Dictionary:
+func get_sense_data(_dist := 0.0) -> Dictionary:
 	var p := get_tree().get_first_node_in_group(&"player") as Player
 	var d := 0.0 if p == null else p.global_position.distance_to(global_position)
 	return {"label": "Your coffin  (%d m)" % roundi(d), "color": Color(0.55, 0.3, 1.0), "bpm": 0.0}

@@ -9,7 +9,6 @@
 [ext_resource type="Script" path="res://scripts/player/health.gd" id="7_health"]
 [ext_resource type="Script" path="res://scripts/player/sunlight_exposure.gd" id="8_sun"]
 [ext_resource type="Script" path="res://scripts/abilities/ability_manager.gd" id="9_abil"]
-[ext_resource type="Script" path="res://scripts/abilities/vampiric_sense.gd" id="10_sense"]
 [ext_resource type="Script" path="res://scripts/interaction/interactor.gd" id="11_inter"]
 [ext_resource type="Script" path="res://scripts/player/feeding_controller.gd" id="12_feed"]
 [ext_resource type="Script" path="res://scripts/player/player_feedback.gd" id="13_fb"]
@@ -64,15 +63,6 @@ script = ExtResource("8_sun")
 
 [node name="Abilities" type="Node" parent="Components"]
 script = ExtResource("9_abil")
-
-[node name="VampiricSense" type="Node" parent="Components/Abilities"]
-script = ExtResource("10_sense")
-ability_id = &"vampiric_sense"
-display_name = "Vampiric Sense"
-input_action = &"vampiric_sense"
-toggle = true
-blood_cost_per_sec = 1.4
-min_blood_to_activate = 5.0
 
 [node name="Interactor" type="Node" parent="Components"]
 script = ExtResource("11_inter")

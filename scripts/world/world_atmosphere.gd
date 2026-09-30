@@ -44,8 +44,8 @@ func set_vision(f: FormData, duration := 0.6) -> void:
 	if _tween:
 		_tween.kill()
 	_tween = create_tween().set_parallel(true)
-	_tween.tween_property(_env, "ambient_light_energy", f.ambient_energy, duration)
-	_tween.tween_property(_env, "ambient_light_color", f.ambient_color, duration)
+	_tween.tween_property(_env, "ambient_light_energy", maxf(f.vision_floor_energy, 0.28), duration)
+	_tween.tween_property(_env, "ambient_light_color", f.vision_floor_color, duration)
 	_tween.tween_property(_env, "adjustment_saturation", f.saturation, duration)
 	_tween.tween_property(_env, "adjustment_brightness", f.brightness, duration)
 	_tween.tween_property(_env, "adjustment_contrast", f.contrast, duration)

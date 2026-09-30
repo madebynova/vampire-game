@@ -1,0 +1,75 @@
+[gd_resource type="Resource" script_class="NpcProfile" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_profile.gd" id="1_prof"]
+[ext_resource type="Script" path="res://scripts/data/blood_memory.gd" id="2_mem"]
+[ext_resource type="Script" path="res://scripts/data/schedule_entry.gd" id="3_sch"]
+
+[sub_resource type="Resource" id="mem_calm"]
+script = ExtResource("2_mem")
+condition = &"calm"
+title = "Candlelight at the Gatehouse"
+text = "A needle trembling in candlelight. Through the gatehouse slit: robed figures carrying a chest down into the cellar beneath the manor. A bell nobody rang.\n\nYou count seven voices. One of them is a child's."
+facts = PackedStringArray("Elise Marrow hides in the gatehouse from the road.", "She watched robed figures carry a chest into the cellar.", "One of them was a child.")
+
+[sub_resource type="Resource" id="mem_asleep"]
+script = ExtResource("2_mem")
+condition = &"asleep"
+title = "The Lullaby"
+text = "Slow, sweet, sleepy blood. A hummed tune with the wrong number of beats, and under it a small voice counting stairs going down.\n\nIn the dream Elise answers, in a voice not her own: 'Not yet. Not until the new moon.'"
+facts = PackedStringArray("Elise hums a lullaby she never learned.", "Something is due at the new moon.")
+
+[sub_resource type="Resource" id="mem_afraid"]
+script = ExtResource("2_mem")
+condition = &"afraid"
+title = "Crescent and Three Nails"
+text = "Fear scours everything but one image, bright as a brand: an iron hatch, a crescent moon cut into it, three nails driven through the crescent. Her hand is on it. It is warm.\n\nIt should not be warm."
+facts = PackedStringArray("The cellar hatch is marked with a crescent and three nails.", "Something beneath it is warm.")
+
+[sub_resource type="Resource" id="sch_day"]
+script = ExtResource("3_sch")
+start_hour = 5.0
+end_hour = 19.0
+activity = &"idle"
+points = PackedVector3Array(-24, 0, 5.5)
+face_yaw_degrees = 90.0
+
+[sub_resource type="Resource" id="sch_watch"]
+script = ExtResource("3_sch")
+start_hour = 19.0
+end_hour = 23.0
+activity = &"idle"
+points = PackedVector3Array(-18, 0, 5.5)
+face_yaw_degrees = -90.0
+lantern = true
+
+[sub_resource type="Resource" id="sch_sleep"]
+script = ExtResource("3_sch")
+start_hour = 23.0
+end_hour = 5.0
+activity = &"sleep"
+points = PackedVector3Array(-18, 0, 5.5, -20.6, 0, 5.5, -25.2, 0, 3.2)
+face_yaw_degrees = 90.0
+rest_height = 0.85
+
+[resource]
+script = ExtResource("1_prof")
+id = &"elise"
+display_name = "Elise Marrow"
+occupation = "Travelling seamstress"
+skin_color = Color(0.9, 0.72, 0.62, 1)
+cloth_color = Color(0.5, 0.2, 0.28, 1)
+pants_color = Color(0.2, 0.18, 0.28, 1)
+hair_color = Color(0.35, 0.17, 0.1, 1)
+base_heart_rate = 86.0
+notice_radius = 10.0
+night_notice_bonus = 5.0
+light_sleeper = 1.5
+can_follow = true
+greeting_lines = PackedStringArray("Oh! You startled me. Are you with the house?", "I only stopped for shelter. Please - don't tell the keeper I'm here.")
+familiar_lines = PackedStringArray("I can't stay indoors after dark. I sit by the door with the lantern and watch the manor. I sleep when the moon is high, if I sleep at all.")
+trust_lines = PackedStringArray("You're kind. Would you walk me toward the road? I'd feel safer.", "Of course. Lead on.")
+night_lines = PackedStringArray("Who's there?! ...Oh. Forgive me. The dark makes everyone a stranger.")
+blood_description = "Bright and restless. Lavender, thread-oil, and fear she has swallowed."
+blood_yield = 35.0
+memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid")])
+schedule = Array[ExtResource("3_sch")]([SubResource("sch_day"), SubResource("sch_watch"), SubResource("sch_sleep")])

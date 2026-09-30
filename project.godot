@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+ContentRegistry="*res://scripts/core/content_registry.gd"
 InputSetup="*res://scripts/core/input_setup.gd"
 Sfx="*res://scripts/core/sfx.gd"
 

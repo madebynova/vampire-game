@@ -16,6 +16,18 @@ signal deactivated
 var active := false
 
 
+## Configure this instance from data (id, cost, key, tunables).
+func apply_definition(def: AbilityDefinition) -> void:
+	ability_id = def.id
+	display_name = def.display_name
+	input_action = def.input_action
+	toggle = def.toggle
+	blood_cost_per_sec = def.blood_cost_per_sec
+	min_blood_to_activate = def.min_blood_to_activate
+	for key in def.parameters:
+		set(key, def.parameters[key])
+
+
 func is_allowed_in_form() -> bool:
 	return player.form.current.allows_ability(ability_id)
 

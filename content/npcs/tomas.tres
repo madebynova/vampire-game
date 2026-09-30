@@ -1,0 +1,76 @@
+[gd_resource type="Resource" script_class="NpcProfile" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_profile.gd" id="1_prof"]
+[ext_resource type="Script" path="res://scripts/data/blood_memory.gd" id="2_mem"]
+[ext_resource type="Script" path="res://scripts/data/schedule_entry.gd" id="3_sch"]
+
+[sub_resource type="Resource" id="mem_calm"]
+script = ExtResource("2_mem")
+condition = &"calm"
+title = "The Well, Before Dawn"
+text = "Rain on shoulders that are not yours. A heavy iron key, cold in a shaking hand. You kneel by the well and bury it beneath the flagstone.\n\n'Not even the Lord's guests should find the cellar.'"
+facts = PackedStringArray("Tomas Reeve keeps the Blackthorn grounds.", "He is afraid of something beneath the house.", "He buried the cellar key under the well.")
+reveals_secret = &"well_key"
+
+[sub_resource type="Resource" id="mem_asleep"]
+script = ExtResource("2_mem")
+condition = &"asleep"
+title = "A Dream of Ink"
+text = "Sleep-slow blood. A lamp, a quill, a column of names in a cramped hand. Beneath a loose board by the bed a leather book waits, and in the dream you are writing in it, though you never learned to write.\n\nThe last name is not yet finished. It begins with an E."
+facts = PackedStringArray("Tomas keeps a ledger of names.", "He hides it beneath a loose board in his cottage.", "He does not remember writing it.")
+reveals_secret = &"cottage_ledger"
+
+[sub_resource type="Resource" id="mem_afraid"]
+script = ExtResource("2_mem")
+condition = &"afraid"
+title = "Nine Sets of Footsteps"
+text = "Terror has no plot, only fragments: boots on flagstone, a lantern swinging, a hood turned toward the window. You count them again and again. Not seven. Nine.\n\nSomeone was counting on Tomas to say seven."
+facts = PackedStringArray("Tomas counted nine figures, not seven.", "Someone wanted a smaller number remembered.")
+
+[sub_resource type="Resource" id="sch_work"]
+script = ExtResource("3_sch")
+start_hour = 5.5
+end_hour = 19.5
+activity = &"patrol"
+points = PackedVector3Array(6.5, 0, 11, 9.3, 0, 10, 13, 0, 8.5, 9.3, 0, 10)
+
+[sub_resource type="Resource" id="sch_evening"]
+script = ExtResource("3_sch")
+start_hour = 19.5
+end_hour = 20.5
+activity = &"idle"
+points = PackedVector3Array(14.4, 0, 18.4)
+face_yaw_degrees = 90.0
+lantern = true
+
+[sub_resource type="Resource" id="sch_sleep"]
+script = ExtResource("3_sch")
+start_hour = 20.5
+end_hour = 5.5
+activity = &"sleep"
+points = PackedVector3Array(14.4, 0, 18.4, 17.5, 0, 18.4, 21.8, 0, 18.6)
+face_yaw_degrees = 90.0
+rest_height = 0.5
+
+[resource]
+script = ExtResource("1_prof")
+id = &"tomas"
+display_name = "Tomas Reeve"
+occupation = "Groundskeeper"
+skin_color = Color(0.8, 0.62, 0.5, 1)
+cloth_color = Color(0.3, 0.38, 0.24, 1)
+pants_color = Color(0.3, 0.24, 0.18, 1)
+hair_color = Color(0.55, 0.55, 0.55, 1)
+base_heart_rate = 66.0
+notice_radius = 10.0
+night_notice_bonus = 0.0
+light_sleeper = 0.6
+can_follow = true
+greeting_lines = PackedStringArray("Evening, stranger. Mind the road - it's a long way to anywhere.", "The Blackthorn house? Shuttered for years. Best leave it be.", "Folk say the old place isn't empty. I keep the grounds. I don't go inside.")
+familiar_lines = PackedStringArray("You again. I turn in when the lamps are lit - the cottage past the graves. Early to bed, early to rise.", "Nobody bothers me at night. Sleep like a stone, I do. Wife used to say the house could burn down around me.")
+trust_lines = PackedStringArray("You've an honest face. Come, I'll show you where the shade is good.", "Lead on, then. I'll walk with you a spell.")
+night_lines = PackedStringArray("Lamp's lit, so I'm awake. Just barely. Don't stay out in the damp.")
+blood_description = "Aged and smoky. Pipe tobacco, cold rain, old habit."
+blood_yield = 45.0
+memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid")])
+schedule = Array[ExtResource("3_sch")]([SubResource("sch_work"), SubResource("sch_evening"), SubResource("sch_sleep")])

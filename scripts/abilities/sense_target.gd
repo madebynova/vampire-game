@@ -49,10 +49,10 @@ func is_senseable() -> bool:
 	return true
 
 
-func get_data() -> Dictionary:
+func get_data(dist := 0.0) -> Dictionary:
 	var p := get_parent()
 	if p and p.has_method(&"get_sense_data"):
-		return p.get_sense_data()
+		return p.get_sense_data(dist)
 	return {}
 
 
@@ -63,7 +63,8 @@ func apply(shown: bool, strength: float, listener_pos: Vector3 = Vector3.ZERO) -
 	if not shown:
 		_label.visible = false
 		return
-	var data := get_data()
+	var dist := global_position.distance_to(listener_pos)
+	var data := get_data(dist)
 	var col: Color = data.get("color", sense_color)
 	var bpm: float = data.get("bpm", 0.0)
 	var hz := bpm / 60.0 if bpm > 0.0 else 0.8
@@ -71,7 +72,6 @@ func apply(shown: bool, strength: float, listener_pos: Vector3 = Vector3.ZERO) -
 	_mat.set_shader_parameter(&"intensity", 0.4 + 0.6 * strength)
 	_mat.set_shader_parameter(&"beat_hz", hz)
 
-	var dist := global_position.distance_to(listener_pos)
 	var text: String = data.get("label", "")
 	_label.visible = text != "" and dist <= label_range
 	if _label.visible and text != _last_label:

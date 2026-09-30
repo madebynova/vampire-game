@@ -18,6 +18,10 @@ func _ready() -> void:
 	_register(&"vampiric_sense", [KEY_Q], [], [JOY_BUTTON_LEFT_SHOULDER])
 	_register(&"toggle_help", [KEY_H])
 	_register(&"toggle_debug", [KEY_F3])
+	# Abilities (including mod abilities) may declare their own default key.
+	for def in ContentRegistry.list(&"AbilityDefinition"):
+		if def.input_action != &"" and def.default_key != 0 and not InputMap.has_action(def.input_action):
+			_register(def.input_action, [def.default_key])
 
 
 func _register(action: StringName, keys: Array, axes: Array = [], buttons: Array = []) -> void:

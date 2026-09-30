@@ -16,8 +16,7 @@ const COFFIN_SCENE := preload("res://scenes/props/coffin.tscn")
 const STASH_SCENE := preload("res://scenes/props/secret_stash.tscn")
 const HATCH_SCENE := preload("res://scenes/props/cellar_hatch.tscn")
 const NPC_SCENE := preload("res://scenes/npc/human_npc.tscn")
-const TOMAS := preload("res://data/npcs/tomas.tres")
-const ELISE := preload("res://data/npcs/elise.tres")
+@export var location_id: StringName = &"blackthorn"
 
 const GRASS := Color(0.17, 0.23, 0.12)
 const DIRT := Color(0.34, 0.27, 0.19)
@@ -33,9 +32,12 @@ const WALL_H := 3.6
 const WALL_T := 0.4
 
 var coffin: Coffin
+var location: LocationData
+var npcs: Dictionary = {}     ## id -> HumanNpc
+var secrets: Dictionary = {}  ## id -> SecretStash
 var tomas: HumanNpc
 var elise: HumanNpc
-var stash: SecretStash
+var stash: SecretStash        ## the well key (kept for tests/tools)
 
 
 func _ready() -> void:
@@ -43,6 +45,8 @@ func _ready() -> void:
 
 
 func build() -> void:
+	location = ContentRegistry.get_def(&"LocationData", location_id) as LocationData
+	assert(location != null, "WorldBuilder: unknown location %s" % location_id)
 	_ground()
 	_house()
 	_gatehouse()
@@ -120,7 +124,7 @@ func _house() -> void:
 	_omni(Vector3(-5.0, 2.4, -10.0), Color(0.6, 0.25, 0.4), 0.35, 7.0)
 
 	coffin = COFFIN_SCENE.instantiate() as Coffin
-	coffin.position = Vector3(-5.6, 0.0, -13.2)
+	coffin.position = location.coffin_position
 	add_child(coffin)
 
 
@@ -216,11 +220,21 @@ func _graveyard() -> void:
 # ---------------------------------------------------------------- actors
 
 func _actors() -> void:
-	tomas = _spawn_npc(TOMAS, Vector3(7.0, 0, 11.0), 90.0)
-	elise = _spawn_npc(ELISE, Vector3(-24.0, 0, 5.5), 90.0)
-	stash = STASH_SCENE.instantiate() as SecretStash
-	stash.position = Vector3(11.0, 0.0, 13.9)
-	add_child(stash)
+	for p in location.npcs:
+		var profile := ContentRegistry.npc(p.npc_id)
+		if profile == null:
+			push_warning("Location '%s' references unknown NPC '%s'" % [location.id, p.npc_id])
+			continue
+		npcs[p.npc_id] = _spawn_npc(profile, p.position, p.yaw_degrees)
+	tomas = npcs.get(&"tomas")
+	elise = npcs.get(&"elise")
+	for sp in location.secrets:
+		var st := STASH_SCENE.instantiate() as SecretStash
+		st.placement = sp
+		st.position = sp.position
+		add_child(st)
+		secrets[sp.secret_id] = st
+	stash = secrets.get(&"well_key")
 
 
 func _spawn_npc(profile: NpcProfile, pos: Vector3, yaw_degrees: float) -> HumanNpc:

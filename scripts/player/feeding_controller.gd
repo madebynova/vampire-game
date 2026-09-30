@@ -76,8 +76,8 @@ func _complete() -> void:
 	_end()
 	Sfx.play(&"feed_end", -2.0)
 	player.state.set_mode(PlayerState.Mode.NORMAL)
-	if npc.profile.reveals_secret != &"":
-		get_tree().call_group(&"secrets", &"reveal", npc.profile.reveals_secret)
+	if result["reveals"] != &"":
+		get_tree().call_group(&"secrets", &"reveal", result["reveals"])
 	feed_completed.emit(npc, result)
 
 

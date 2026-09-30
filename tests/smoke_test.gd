@@ -261,9 +261,31 @@ func _run() -> void:
 		_check(not player.state.is_dead(), "survived feeding in open sun (hp %.0f)" % player.health.value)
 		_check(world.tomas.mode == HumanNpc.Mode.DRAINED, "Tomas drained after feed")
 		_check(player.health.value < hp0 - 1.0, "chase + feed under sunlight costs health (%.0f -> %.0f hp)" % [hp0, player.health.value])
-		_check(main.hud._memory_title.text.begins_with("The Well"), "Tomas' memory shown: %s" % main.hud._memory_title.text)
-		_check(world.stash.discovered, "Tomas' blood revealed the buried key (blood -> information)")
+		_check(main.hud._memory_title.text.begins_with("Nine Sets"), "a terrified Tomas gives a DIFFERENT memory (afraid variant): %s" % main.hud._memory_title.text)
+		_check(not world.stash.discovered, "terror blood does not reveal the buried key")
 		main.hud._memory_panel.visible = false
+
+	print("[TEST] --- SAME PERSON, CALM: A DIFFERENT MEMORY ---")
+	# Deterministic: rested world, calm Tomas, vampire adjacent in the open. (No approach time counted.)
+	get_tree().call_group(&"npcs", &"new_day")
+	player.health.revive(1.0)
+	player.sunlight.reset()
+	# Tomas faces west; approach from behind (east) so he is not looking at the vampire.
+	_place(Vector3(10.5, 0, 11.0), 90.0)
+	world.tomas.awareness = 0.0
+	await get_tree().physics_frame
+	await _run_until_focus(world.tomas.global_position, 3.0)
+	_check(world.tomas.mode == HumanNpc.Mode.CALM and world.tomas.awareness < 0.6, "approached from behind, Tomas has not noticed (awareness %.2f)" % world.tomas.awareness)
+	var hp_sun0 := player.health.value
+	Input.action_press(&"interact")
+	await _wait(4.4)
+	Input.action_release(&"interact")
+	await _wait(0.3)
+	var lost := hp_sun0 - player.health.value
+	_check(not player.state.is_dead() and lost > 8.0 and lost < 60.0, "a full feed in open sun is survivable but costly (-%.0f hp, meter %.1f)" % [lost, player.sunlight.meter])
+	_check(main.hud._memory_title.text.begins_with("The Well"), "calm Tomas: %s" % main.hud._memory_title.text)
+	_check(world.stash.discovered, "calm blood revealed the buried key (blood -> information)")
+	main.hud._memory_panel.visible = false
 
 	print("[TEST] --- SECRET REVEALED BY SENSE, THEN DUG ---")
 	await _run_to(Vector3(3.0, 0, -3.0), 2.0, 6.0)
@@ -282,7 +304,7 @@ func _run() -> void:
 	_check(_prompt().begins_with("Dig"), "'Dig up the buried key' prompt appears: %s" % _prompt())
 	await _tap(&"interact")
 	await _wait(0.3)
-	_check(SecretStash.key_held, "Key dug up")
+	_check(SecretStash.has_flag(&"cellar_key"), "Key dug up")
 	_place(Vector3(5.2, 0, -9.5), 0.0)
 	await _wait(0.4)
 	_check(_prompt().begins_with("Unlock"), "Hatch now says: %s" % _prompt())
@@ -350,24 +372,6 @@ func _run() -> void:
 	Input.action_release(&"interact")
 	await _wait(0.4)
 	_check(world.elise.mode == HumanNpc.Mode.DRAINED and main.hud._memory_panel.visible, "night 3: Elise fed on again, memory shown")
-	main.hud._memory_panel.visible = false
-
-	print("[TEST] --- COST OF FEEDING IN OPEN SUN ---")
-	# Deterministic: calm Tomas, vampire adjacent in the open. (No approach time counted.)
-	player.health.revive(1.0)
-	player.sunlight.reset()
-	_place(Vector3(8.0, 0, 11.0), 90.0)
-	world.tomas.awareness = 0.0
-	await get_tree().physics_frame
-	_face(world.tomas.global_position)
-	await _wait(0.2)
-	var hp_sun0 := player.health.value
-	Input.action_press(&"interact")
-	await _wait(4.4)
-	Input.action_release(&"interact")
-	await _wait(0.3)
-	var lost := hp_sun0 - player.health.value
-	_check(not player.state.is_dead() and lost > 8.0 and lost < 60.0, "a full feed in open sun is survivable but costly (-%.0f hp, meter %.1f)" % [lost, player.sunlight.meter])
 	main.hud._memory_panel.visible = false
 
 	print("[TEST] --- HUMAN FORM IS SAFE IN SUN ---")

@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="LocationData" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/location_data.gd" id="1_loc"]
+[ext_resource type="Script" path="res://scripts/data/npc_placement.gd" id="2_np"]
+[ext_resource type="Script" path="res://scripts/data/secret_placement.gd" id="3_sp"]
+
+[sub_resource type="Resource" id="np_tomas"]
+script = ExtResource("2_np")
+npc_id = &"tomas"
+position = Vector3(6.5, 0, 11)
+yaw_degrees = 90.0
+
+[sub_resource type="Resource" id="np_elise"]
+script = ExtResource("2_np")
+npc_id = &"elise"
+position = Vector3(-24, 0, 5.5)
+yaw_degrees = 90.0
+
+[sub_resource type="Resource" id="sp_key"]
+script = ExtResource("3_sp")
+secret_id = &"well_key"
+position = Vector3(11, 0, 13.9)
+sense_label = "Buried: cellar key"
+prompt = "Dig up the buried key"
+reveal_text = "Blood memory: something is buried beneath the well. Vampiric Sense will show where."
+found_text = "You dig up a rusted iron key. It belongs to the cellar hatch inside the house."
+grants_flag = &"cellar_key"
+
+[sub_resource type="Resource" id="sp_ledger"]
+script = ExtResource("3_sp")
+secret_id = &"cottage_ledger"
+position = Vector3(18.6, 0, 16.6)
+sense_label = "Hidden: a book of names"
+prompt = "Pry up the loose board"
+reveal_text = "Dream memory: a ledger is hidden under a loose board in Tomas' cottage."
+found_text = "A leather ledger. Column after column of names in a hand that isn't Tomas'. The last line is unfinished: 'E. Marr'."
+grants_flag = &"ledger_read"
+
+[resource]
+script = ExtResource("1_loc")
+id = &"blackthorn"
+display_name = "Blackthorn Estate"
+coffin_position = Vector3(-5.6, 0, -13.2)
+npcs = Array[ExtResource("2_np")]([SubResource("np_tomas"), SubResource("np_elise")])
+secrets = Array[ExtResource("3_sp")]([SubResource("sp_key"), SubResource("sp_ledger")])
+lamp_positions = PackedVector3Array(1.2, 0, -4.8, 1.4, 0, 3.5, 1.4, 0, 14, -8, 0, 3.8, -17, 0, 3.8, 9, 0, 9.9, 15.4, 0, 17.2)

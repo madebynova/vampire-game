@@ -7,10 +7,8 @@ signal transform_started(to_form: FormData)
 signal form_changed(old_form: FormData, new_form: FormData)
 signal transform_finished(form: FormData)
 
-@export var forms: Array[FormData] = [
-	preload("res://data/forms/human.tres"),
-	preload("res://data/forms/vampire.tres"),
-]
+## Loaded from the ContentRegistry (content/forms + mods) unless set explicitly.
+@export var forms: Array[FormData] = []
 @export var start_form_id: StringName = &"human"
 ## Forms the transform key cycles through (ids). Wolf/Bat would be appended later.
 @export var cycle_ids: Array[StringName] = [&"human", &"vampire"]
@@ -21,6 +19,9 @@ var _transform_serial := 0
 
 
 func _on_setup() -> void:
+	if forms.is_empty():
+		for f in ContentRegistry.list(&"FormData"):
+			forms.append(f)
 	current = get_form(start_form_id)
 	assert(current != null, "FormController: start form missing")
 	form_changed.emit(null, current)

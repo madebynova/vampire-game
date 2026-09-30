@@ -1,10 +1,8 @@
 class_name FormData
-extends Resource
+extends ContentDef
 ## Data-driven description of one player form (Human, Vampire, later Wolf/Bat...).
 ## Everything that differs between forms lives here, not in player code.
 
-@export var id: StringName = &"human"
-@export var display_name := "Human"
 @export var tagline := ""
 
 @export_group("Movement")
@@ -15,9 +13,11 @@ extends Resource
 
 @export_group("Rules")
 @export var sun_vulnerable := false
+## Multiplier on incoming sunlight heat for this form (future: elder vampires, hardy forms).
+@export var sun_heat_multiplier := 1.0
 @export var frightens_humans := false
 @export var can_feed := false
-## Ability ids (Ability.ability_id) this form is allowed to use.
+## Ability ids (AbilityDefinition.id) this form is allowed to use.
 @export var abilities: PackedStringArray = PackedStringArray()
 @export var blood_drain_per_sec := 0.0
 @export var regen_per_sec := 0.0
@@ -39,8 +39,10 @@ extends Resource
 
 @export_group("Camera and vision")
 @export var fov := 70.0
-@export var ambient_energy := 0.3
-@export var ambient_color := Color(0.55, 0.6, 0.75)
+## Darkest the world ever looks to this form. Humans are nearly blind at night; a vampire
+## sees by a cool floor light. (Ambient is max(time-of-day ambient, this floor).)
+@export var vision_floor_energy := 0.06
+@export var vision_floor_color := Color(0.5, 0.52, 0.62)
 @export var saturation := 1.0
 @export var brightness := 1.0
 @export var contrast := 1.0

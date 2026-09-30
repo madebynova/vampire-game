@@ -8,7 +8,6 @@ enum Mode { CALM, FLEEING, ENTRANCED, DRAINED }
 signal mode_changed(new_mode: Mode)
 
 @export var profile: NpcProfile
-@export var notice_radius := 10.0
 @export var close_notice_radius := 2.2
 @export var flee_speed := 5.6
 @export var flee_duration := 9.0
@@ -22,6 +21,7 @@ var mode: Mode = Mode.CALM
 var awareness := 0.0
 var blood_left := 1.0
 var was_afraid_when_grabbed := false
+var was_asleep := false
 
 var _player: Player
 var _home_pos := Vector3.ZERO
@@ -103,24 +103,38 @@ func _calm(delta: float) -> void:
 
 func _update_awareness(delta: float, d: float) -> void:
 	var frightening := _player != null and _player.form.current.frightens_humans and not _player.state.is_dead()
-	var seen := false
-	if frightening and d < notice_radius:
+	var rate := 0.0
+	if frightening and d < _notice_radius():
 		var to := _player.global_position - global_position
 		to.y = 0.0
 		var facing := (-global_transform.basis.z).dot(to.normalized()) if to.length() > 0.05 else 1.0
-		if facing > -0.2 or d < close_notice_radius:
+		var in_view := facing > -0.2
+		if in_view or d < close_notice_radius:
 			var from := global_position + Vector3(0, 1.6, 0)
 			var target := _player.global_position + Vector3(0, 1.4, 0)
 			var query := PhysicsRayQueryParameters3D.create(from, target, 1)
-			seen = get_world_3d().direct_space_state.intersect_ray(query).is_empty()
-	if seen:
-		awareness += lerpf(0.3, 1.3, 1.0 - d / notice_radius) * delta
+			if get_world_3d().direct_space_state.intersect_ray(query).is_empty():
+				if in_view:
+					rate = lerpf(0.3, 1.3, 1.0 - d / _notice_radius())
+				else:
+					rate = 0.35  # sensed, not seen: someone standing right behind you
+	if rate > 0.0:
+		awareness += rate * delta
 	else:
 		awareness -= (0.25 if frightening else 0.5) * delta
 	awareness = clampf(awareness, 0.0, 1.0)
 	alert_label.text = "?" if awareness > 0.2 else ""
 	if awareness >= 1.0:
 		_start_fleeing()
+
+
+func _notice_radius() -> float:
+	return profile.notice_radius + (profile.night_notice_bonus * _darkness() )
+
+
+func _darkness() -> float:
+	var tod := get_tree().get_first_node_in_group(&"time_of_day")
+	return tod.darkness() if tod != null else 0.0
 
 
 func _flee(delta: float) -> void:
@@ -193,7 +207,7 @@ func can_be_fed() -> bool:
 
 
 func begin_feed(feeder: Node3D) -> void:
-	was_afraid_when_grabbed = mode == Mode.FLEEING or awareness > 0.3
+	was_afraid_when_grabbed = mode == Mode.FLEEING or awareness > 0.6
 	_set_mode(Mode.ENTRANCED)
 	_feed_progress = 0.0
 	velocity = Vector3.ZERO
@@ -232,15 +246,30 @@ func interrupt_feed() -> void:
 	Sfx.play_at(&"gasp", global_position + Vector3(0, 1.5, 0), -2.0)
 
 
+## What state the victim was in when grabbed decides which memory the blood holds.
+func feed_condition() -> StringName:
+	if was_asleep:
+		return &"asleep"
+	return &"afraid" if was_afraid_when_grabbed else &"calm"
+
+
 func get_feed_result() -> Dictionary:
+	var memory := profile.memory_for(feed_condition())
+	var note := "Sharp with adrenaline: fear has a flavour."
+	if was_asleep:
+		note = "Slow and sweet, thick with dreams."
+	elif not was_afraid_when_grabbed:
+		note = "Steady and warm; they never saw it coming."
 	return {
 		"name": profile.display_name,
 		"occupation": profile.occupation,
 		"blood": profile.blood_description,
-		"taste_note": "Sharp with adrenaline: fear has a flavour." if was_afraid_when_grabbed else "Steady and warm; they never saw it coming.",
-		"title": profile.memory_title,
-		"memory": profile.memory_text,
-		"facts": profile.facts,
+		"taste_note": note,
+		"title": memory.title if memory else "Nothing",
+		"memory": memory.text if memory else "",
+		"facts": memory.facts if memory else PackedStringArray(),
+		"reveals": memory.reveals_secret if memory else &"",
+		"condition": feed_condition(),
 		"yield": profile.blood_yield * (1.25 if was_afraid_when_grabbed else 1.0),
 	}
 
@@ -285,7 +314,7 @@ func _mood() -> String:
 	return "uneasy" if awareness > 0.25 else "calm"
 
 
-func get_sense_data() -> Dictionary:
+func get_sense_data(_dist := 0.0) -> Dictionary:
 	var bpm := get_heart_rate()
 	var col := Color(0.85, 0.04, 0.1)
 	match mode:
