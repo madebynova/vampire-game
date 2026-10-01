@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Vampire Game">
+  <defs>
+    <linearGradient id="d" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff404d"/>
+      <stop offset="1" stop-color="#6b050f"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#060306"/>
+  <path d="M32 9c7.5 10.5 15 18.4 15 27.5A15 15 0 0 1 17 36.5C17 27.4 24.5 19.5 32 9Z" fill="url(#d)"/>
+  <path d="M25.5 38.5 28 49l2.5-8.5zm13 0L36 49l-2.5-8.5z" fill="#ede0cc" opacity=".92"/>
+</svg>

@@ -1,0 +1,539 @@
+<!doctype html>
+<!--
+  Vampire Game - public website (Phase 1).
+  Plain static HTML/CSS/JS: no build step, no dependencies. Every path is RELATIVE so the site works from
+  any base URL, including a GitHub Pages project URL (https://<user>.github.io/<repo>/).
+
+  PHASE 2 HOOK: when the Godot Web export is hosted (planned at ./play/), set
+      data-play-url="play/"
+  on the <html> tag below and every PLAY NOW button becomes a real link. Nothing else needs to change.
+-->
+<html lang="en" data-play-url="">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vampire Game - Become what hunts in the night</title>
+  <meta name="description" content="Vampire Game is a third-person vampire prototype built in Godot: transform between Human and Vampire, feed, survive the sun, sense the living and drink their memories. A development build, still being made.">
+  <meta name="theme-color" content="#060306">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Vampire Game - Become what hunts in the night">
+  <meta property="og:description" content="A third-person vampire prototype built in Godot. Development build - still being made.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/style.css">
+  <script>document.documentElement.classList.add('js');</script>
+  <script src="assets/js/main.js" defer></script>
+</head>
+<body>
+
+<!-- Icon sprite (stroke icons, drawn with currentColor) -->
+<svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol id="i-transform" viewBox="0 0 24 24"><path d="M4 8h13m0 0-3.5-3.5M17 8l-3.5 3.5M20 16H7m0 0 3.5-3.5M7 16l3.5 3.5"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3c3.5 4.6 6 7.8 6 11a6 6 0 0 1-12 0c0-3.2 2.5-6.4 6-11Z"/><path d="M9.3 14.6a2.8 2.8 0 0 0 2.3 2.5"/></symbol>
+    <symbol id="i-daynight" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor" fill-opacity=".35"/><path d="M12 4v16"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5V5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+    <symbol id="i-talk" viewBox="0 0 24 24"><path d="M4 5h16v11H11l-4.5 4v-4H4Z"/><path d="M8 9h8M8 12.5h5"/></symbol>
+    <symbol id="i-memory" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="5.5" stroke-dasharray="2.5 2"/><circle cx="12" cy="12" r="9" stroke-dasharray="1 3"/></symbol>
+    <symbol id="i-coffin" viewBox="0 0 24 24"><path d="M9 2.5h6l3 5.5-3 14H9L6 8Z"/><path d="M12 8v8M9.5 11h5"/></symbol>
+    <symbol id="i-climb" viewBox="0 0 24 24"><path d="M6 21V10a6 6 0 0 1 12 0v11Z"/><path d="M12 18v-7.5M9 13.5l3-3 3 3"/></symbol>
+    <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5Z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></symbol>
+    <symbol id="i-bug" viewBox="0 0 24 24"><path d="M9 7.5a3 3 0 0 1 6 0M7 11h10v3.5a5 5 0 0 1-10 0Z"/><path d="M12 11v8.5M3.5 11.5 7 13M20.5 11.5 17 13M4 18l3-1.5M20 18l-3-1.5"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header" id="site-header">
+  <div class="wrap header-inner">
+    <a class="brand" href="#top" aria-label="Vampire Game - back to top">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 9c7.5 10.5 15 18.4 15 27.5A15 15 0 0 1 17 36.5C17 27.4 24.5 19.5 32 9Z" fill="currentColor"/><path d="m25.5 38.5 2.5 10.5 2.5-10.5zm13 0L36 49l-2.5-10.5z" fill="#060306" opacity=".75"/></svg>
+      <span class="brand-text">Vampire Game</span>
+    </a>
+
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
+      <span class="sr-only">Menu</span>
+      <span class="nav-toggle-bars" aria-hidden="true"></span>
+    </button>
+
+    <nav class="site-nav" id="site-nav" aria-label="Primary">
+      <ul class="nav-links">
+        <li><a href="#about">The Prototype</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#controls">Controls</a></li>
+        <li><a href="#status">Status</a></li>
+        <li><a href="#links">Links</a></li>
+      </ul>
+      <a class="nav-cta" href="https://github.com/madebynova/vampire-game" rel="noopener">
+        GitHub
+        <svg class="ico" aria-hidden="true"><use href="#i-out"/></svg>
+      </a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ============================================================ HERO -->
+  <section class="hero" id="top" aria-labelledby="hero-title">
+    <div class="hero-sky" aria-hidden="true">
+      <div class="stars stars-a"></div>
+      <div class="stars stars-b"></div>
+      <div class="moon"></div>
+      <div class="fog fog-a"></div>
+      <div class="fog fog-b"></div>
+
+      <svg class="skyline" viewBox="0 0 1600 420" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id="pickets" width="16" height="44" patternUnits="userSpaceOnUse">
+            <path d="M4 44V13l4-8 4 8v31Z" fill="#040203"/>
+          </pattern>
+        </defs>
+        <!-- distant hills and tree line -->
+        <path d="M0 322C140 296 290 336 440 316s300-34 460 6 330-24 480 8 170-10 220-6V420H0Z" fill="#0b0509"/>
+        <g fill="#0b0509">
+          <path d="M120 330l10-46 10 46zM150 330l8-34 8 34zM1230 322l10-50 10 50zM1262 324l8-38 8 38zM1450 326l9-44 9 44z"/>
+        </g>
+        <!-- ruined wall -->
+        <path d="M230 384V324h22v-18h30v20h28l14 10 14-24h30v32l34 10 18-18 40 6V384Z" fill="#050205"/>
+        <!-- estate -->
+        <g fill="#050205">
+          <!-- tower and spire -->
+          <path d="M548 384V196h92v188Z"/>
+          <path d="M534 196 594 62l60 134Z"/>
+          <path d="M593 62V36" stroke="#050205" stroke-width="3"/>
+          <!-- great hall and gable -->
+          <path d="M640 384V252h330v132Z"/>
+          <path d="M618 252 805 150l187 102Z"/>
+          <path d="M702 190v-44h20v54ZM892 196v-40h18v50Z"/>
+          <!-- east wing with the broken roof -->
+          <path d="M970 384V290h132v94Z"/>
+          <path d="M958 290l36-40 16 14 26-34 18 26 28-6 24 40Z"/>
+          <!-- tower buttress -->
+          <path d="M520 384V262l28-20v142Z"/>
+        </g>
+        <!-- lit windows -->
+        <g class="win" fill="#ffcc66">
+          <path class="w1" d="M583 232v-16a9 9 0 0 1 18 0v16Z"/>
+          <path class="w2" d="M583 318v-18a9 9 0 0 1 18 0v18Z"/>
+          <path class="w3" d="M718 328v-30a12 12 0 0 1 24 0v30Z"/>
+          <path class="w1" d="M850 328v-30a12 12 0 0 1 24 0v30Z"/>
+          <path class="w2" d="M1018 346v-22a10 10 0 0 1 20 0v22Z"/>
+        </g>
+        <g fill="#050205" opacity=".95">
+          <path d="M778 328v-30a12 12 0 0 1 24 0v30ZM912 328v-30a12 12 0 0 1 24 0v30Z"/>
+        </g>
+        <!-- bare trees -->
+        <g fill="none" stroke="#040203" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1290 392c-6-50 8-84 0-128" stroke-width="9"/>
+          <path d="M1292 300c-30-22-52-26-74-52M1290 280c26-26 54-34 84-42M1288 330c-20-10-42-12-60-30M1291 270c-6-22-4-40 6-62" stroke-width="5"/>
+          <path d="M1218 248c-12-4-20-14-24-28M1374 238c14-2 24-10 30-24M1297 208c10-12 22-18 34-20" stroke-width="3"/>
+          <path d="M96 392c-4-34 6-62 0-96" stroke-width="7"/>
+          <path d="M98 330c-22-14-38-16-54-34M96 316c20-18 40-24 62-30M98 296c-4-16-2-30 6-44" stroke-width="4"/>
+        </g>
+        <!-- iron fence and ground -->
+        <rect x="0" y="348" width="1600" height="44" fill="url(#pickets)"/>
+        <rect x="0" y="360" width="1600" height="3" fill="#040203"/>
+        <rect x="0" y="384" width="1600" height="36" fill="#030102"/>
+      </svg>
+
+      <canvas class="embers" id="embers"></canvas>
+    </div>
+
+    <div class="wrap hero-inner">
+      <p class="badge reveal"><span class="badge-dot" aria-hidden="true"></span>Development Build <span class="badge-sep" aria-hidden="true">/</span> Task 1.8</p>
+
+      <h1 class="title reveal" id="hero-title" style="--d:80ms">
+        <span class="title-main">Vampire</span>
+        <span class="title-sub">Game</span>
+      </h1>
+
+      <p class="tagline reveal" style="--d:160ms">Become what hunts in the night.</p>
+
+      <div class="hero-cta reveal" style="--d:240ms">
+        <a class="btn btn-play btn-xl is-disabled js-play" role="button" aria-disabled="true" tabindex="0" aria-describedby="play-note">
+          <svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>
+          <span class="btn-text">
+            <span class="btn-label">Play Now</span>
+            <span class="btn-sub">Web build coming soon</span>
+          </span>
+        </a>
+        <a class="btn btn-ghost btn-xl" href="https://github.com/madebynova/vampire-game" rel="noopener">
+          <svg class="ico" aria-hidden="true"><use href="#i-code"/></svg>
+          <span class="btn-text"><span class="btn-label">View on GitHub</span></span>
+        </a>
+      </div>
+      <p class="play-note reveal" id="play-note" style="--d:300ms">
+        The browser build isn't connected yet, so this button is a placeholder.
+        The prototype currently runs from the <a href="#status">Godot project</a>.
+      </p>
+    </div>
+
+    <a class="scroll-cue" href="#about" aria-label="Scroll to the prototype"><span></span></a>
+  </section>
+
+  <!-- ============================================================ ABOUT -->
+  <section class="section" id="about" aria-labelledby="about-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">The Prototype</p>
+        <h2 id="about-title">Is being this vampire actually fun?</h2>
+        <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
+      </header>
+
+      <div class="about-grid">
+        <div class="about-copy reveal">
+          <p class="lede">
+            Vampire Game is a <strong>third-person, single-player vampire action-adventure</strong> &mdash; for now a small,
+            deliberate prototype built in Godot. It exists to answer one question: does it feel like you <em>became</em> one?
+          </p>
+          <p>
+            You begin in the coffin room of the Blackthorn Estate as a Human. Change, and the night opens around you:
+            you are faster, hungrier, and you can sense what the living cannot. But the day is coming, and a few minutes
+            of full noon sun is enough to end you.
+          </p>
+          <p>
+            The systems are small on purpose. They are meant to collide &mdash; sunlight against feeding, time of day against
+            what you are &mdash; so that every choice costs something.
+          </p>
+          <ul class="tags" aria-label="Focus areas">
+            <li><svg class="ico" aria-hidden="true"><use href="#i-transform"/></svg>Human &harr; Vampire</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-drop"/></svg>Feeding</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-daynight"/></svg>Day / night survival</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-sun"/></svg>Sunlight danger</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-eye"/></svg>Vampiric Sense</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-talk"/></svg>NPC interactions &amp; trust</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-memory"/></svg>Blood Memories</li>
+            <li><svg class="ico" aria-hidden="true"><use href="#i-coffin"/></svg>Coffin &amp; survival loop</li>
+          </ul>
+        </div>
+
+        <aside class="spec reveal" style="--d:120ms" aria-label="Game at a glance">
+          <h3 class="spec-title">At a glance</h3>
+          <dl>
+            <div><dt>Genre</dt><dd>Vampire action-adventure</dd></div>
+            <div><dt>Perspective</dt><dd>Third-person, single-player</dd></div>
+            <div><dt>Engine</dt><dd>Godot 4.8</dd></div>
+            <div><dt>Setting</dt><dd>Blackthorn Estate &mdash; one small location</dd></div>
+            <div><dt>Day length</dt><dd>20 real minutes</dd></div>
+            <div><dt>Cast</dt><dd>3 people, 2 foxes</dd></div>
+            <div><dt>Blood Memories</dt><dd>16 to find</dd></div>
+            <div><dt>Stage</dt><dd>Prototype &mdash; in development</dd></div>
+          </dl>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ FEATURES -->
+  <section class="section section-alt" id="features" aria-labelledby="features-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Mechanics</p>
+        <h2 id="features-title">What the night is made of</h2>
+        <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
+        <p class="section-sub">Everything below exists in the current prototype. No concept art, no mock-ups.</p>
+      </header>
+
+      <div class="cards">
+        <article class="card reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-transform"/></svg></div>
+          <h3>Human &harr; Vampire</h3>
+          <p class="card-line">Two bodies. One hunger.</p>
+          <p>Change, and the world tightens into a red-black tunnel, the body arches, time stutters, and the night opens around you. Going back is quieter: a long exhale, warmth, the cloak turning to ash.</p>
+        </article>
+
+        <article class="card reveal" style="--d:70ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-drop"/></svg></div>
+          <h3>Feeding</h3>
+          <p class="card-line">Every victim drinks differently.</p>
+          <p>A sleeper gives a long, gentle Dreamblood. A terrified victim screams, pays more, and leaves a hot, short Fury &mdash; and anyone who sees it runs. A good feed leaves a Bloodrush. A fox is a quieter, smaller drink.</p>
+        </article>
+
+        <article class="card reveal" style="--d:140ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-daynight"/></svg></div>
+          <h3>Day &amp; Night</h3>
+          <p class="card-line">A full day lasts 20 real minutes.</p>
+          <p>The sky turns on a steady clock, and the people of the estate keep to routines. Night belongs to you. Day does not, and the coffin is where you wait it out.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-sun"/></svg></div>
+          <h3>Sunlight</h3>
+          <p class="card-line">The sun is a clock, and it's running.</p>
+          <p>About three minutes of full noon sun will kill you. Shadow stops being scenery and becomes a decision &mdash; and a fresh Bloodrush buys you a little more patience.</p>
+        </article>
+
+        <article class="card reveal" style="--d:70ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-eye"/></svg></div>
+          <h3>Vampiric Sense</h3>
+          <p class="card-line">See what the living can't.</p>
+          <p>Toggle Sense and the night answers: heartbeats sound different calm, asleep or afraid; strangers flicker while people you know burn steady. It shows people, animals, hidden things &mdash; even the walls you can scale. It costs blood, unless you're riding a Bloodrush.</p>
+        </article>
+
+        <article class="card reveal" style="--d:140ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-talk"/></svg></div>
+          <h3>Trust &amp; Talk</h3>
+          <p class="card-line">People who start to tell you things.</p>
+          <p>Speak with the estate's people as a Human &mdash; a groundskeeper, a seamstress, a night watchman &mdash; and as they come to trust you they share what they know: where the foxes den, who sleeps where, what they are afraid of.</p>
+        </article>
+
+        <article class="card reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-memory"/></svg></div>
+          <h3>Blood Memories</h3>
+          <p class="card-line">Drink a life. Live a moment.</p>
+          <p>Feeding can open a memory: the world freezes and drains into its colour, and the story is told a few words at a time. Sixteen are hidden among the people and the foxes &mdash; some only trust will open, and the deepest waits until you've heard the rest.</p>
+        </article>
+
+        <article class="card reveal" style="--d:70ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-coffin"/></svg></div>
+          <h3>The Coffin Loop</h3>
+          <p class="card-line">Home is a box with a lid.</p>
+          <p>The coffin is your refuge and your reset. Lie down and it asks when you'll wake: dusk, midnight, dawn &mdash; or daylight, to rise as a Human and talk to people in the sun.</p>
+        </article>
+
+        <article class="card reveal" style="--d:140ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-climb"/></svg></div>
+          <h3>Mist &amp; Stone</h3>
+          <p class="card-line">Only a vampire goes this way.</p>
+          <p>Dissolve to mist at a window sill, scale the manor wall to its roof, or drop through the broken roof &mdash; but only on purpose, from the right place, facing the way you mean to go.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ CONTROLS -->
+  <section class="section" id="controls" aria-labelledby="controls-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Controls</p>
+        <h2 id="controls-title">Hands on the night</h2>
+        <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
+        <p class="section-sub">Taken from the game's input map. In-game prompts show the real button for the device you used last.</p>
+      </header>
+
+      <div class="controls reveal">
+        <div class="tabs" role="tablist" aria-label="Input device">
+          <button class="tab" type="button" role="tab" id="tab-kb" aria-controls="panel-kb" aria-selected="true">Keyboard<span class="x"> &amp; Mouse</span></button>
+          <button class="tab" type="button" role="tab" id="tab-xb" aria-controls="panel-xb" aria-selected="false" tabindex="-1">Xbox<span class="x">-style pad</span></button>
+          <button class="tab" type="button" role="tab" id="tab-ps" aria-controls="panel-ps" aria-selected="false" tabindex="-1">PlayStation<span class="x"> pad</span></button>
+        </div>
+
+        <!-- Keyboard & mouse -->
+        <div class="panel" id="panel-kb" role="tabpanel" aria-labelledby="tab-kb">
+          <table class="ctl">
+            <caption>Keyboard &amp; mouse</caption>
+            <thead><tr><th scope="col">Action</th><th scope="col">Input</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Move</th><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> <span class="or">or</span> <kbd>&uarr;</kbd><kbd>&larr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd></td></tr>
+              <tr><th scope="row">Look</th><td><kbd class="wide">Mouse</kbd></td></tr>
+              <tr><th scope="row">Run</th><td><kbd class="wide">Shift</kbd> <span class="hint">hold</span></td></tr>
+              <tr><th scope="row">Jump</th><td><kbd class="wide">Space</kbd></td></tr>
+              <tr><th scope="row">Interact <span class="sub">talk, dig, read, sleep, slip through windows, climb</span></th><td><kbd>E</kbd></td></tr>
+              <tr><th scope="row">Feed <span class="sub">Vampire</span></th><td><kbd>E</kbd> <span class="hint">hold</span></td></tr>
+              <tr><th scope="row">Transform <span class="sub">Human &harr; Vampire</span></th><td><kbd>F</kbd></td></tr>
+              <tr><th scope="row">Vampiric Sense <span class="sub">Vampire, toggle</span></th><td><kbd>Q</kbd></td></tr>
+              <tr><th scope="row">Continue a Blood Memory</th><td><kbd>E</kbd><kbd class="wide">Space</kbd><kbd class="wide">Enter</kbd> <span class="or">or</span> <kbd class="wide">Click</kbd></td></tr>
+              <tr><th scope="row">Choose when to wake <span class="sub">at the coffin</span></th><td><kbd>&uarr;</kbd><kbd>&darr;</kbd> <span class="or">+</span> <kbd class="wide">Enter</kbd> <span class="hint"><kbd class="wide">Esc</kbd> stays awake</span></td></tr>
+              <tr><th scope="row">Pause</th><td><kbd class="wide">Esc</kbd></td></tr>
+              <tr><th scope="row">Controls screen</th><td><kbd>H</kbd></td></tr>
+              <tr><th scope="row">Debug overlay <span class="sub">development</span></th><td><kbd>F3</kbd></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Xbox-style pad -->
+        <div class="panel" id="panel-xb" role="tabpanel" aria-labelledby="tab-xb">
+          <table class="ctl">
+            <caption>Xbox-style pad</caption>
+            <thead><tr><th scope="col">Action</th><th scope="col">Input</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Move</th><td><kbd class="pad stick">Left stick</kbd></td></tr>
+              <tr><th scope="row">Look</th><td><kbd class="pad stick">Right stick</kbd></td></tr>
+              <tr><th scope="row">Run</th><td><kbd class="pad pill">RT</kbd> <span class="hint">hold</span> <span class="or">or click</span> <kbd class="pad pill">L3</kbd> <span class="hint">to latch until you stop</span></td></tr>
+              <tr><th scope="row">Jump</th><td><kbd class="pad xa">A</kbd></td></tr>
+              <tr><th scope="row">Interact <span class="sub">talk, dig, read, sleep, slip through windows, climb</span></th><td><kbd class="pad xx">X</kbd></td></tr>
+              <tr><th scope="row">Feed <span class="sub">Vampire</span></th><td><kbd class="pad xx">X</kbd> <span class="hint">hold</span></td></tr>
+              <tr><th scope="row">Transform <span class="sub">Human &harr; Vampire</span></th><td><kbd class="pad xy">Y</kbd></td></tr>
+              <tr><th scope="row">Vampiric Sense <span class="sub">Vampire, toggle</span></th><td><kbd class="pad pill">LB</kbd> <span class="or">or</span> <kbd class="pad pill">R3</kbd></td></tr>
+              <tr><th scope="row">Continue a Blood Memory</th><td><kbd class="pad xa">A</kbd><kbd class="pad xb">B</kbd><kbd class="pad xx">X</kbd></td></tr>
+              <tr><th scope="row">Choose when to wake <span class="sub">at the coffin</span></th><td><kbd class="pad pill">D-pad</kbd> <span class="or">+</span> <kbd class="pad xa">A</kbd> <span class="hint"><kbd class="pad xb">B</kbd> stays awake</span></td></tr>
+              <tr><th scope="row">Pause</th><td><kbd class="pad pill">Menu</kbd></td></tr>
+              <tr><th scope="row">Controls screen</th><td><kbd class="pad pill">View</kbd></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PlayStation pad -->
+        <div class="panel" id="panel-ps" role="tabpanel" aria-labelledby="tab-ps">
+          <table class="ctl">
+            <caption>PlayStation pad</caption>
+            <thead><tr><th scope="col">Action</th><th scope="col">Input</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Move</th><td><kbd class="pad stick">Left stick</kbd></td></tr>
+              <tr><th scope="row">Look</th><td><kbd class="pad stick">Right stick</kbd></td></tr>
+              <tr><th scope="row">Run</th><td><kbd class="pad pill">R2</kbd> <span class="hint">hold</span> <span class="or">or click</span> <kbd class="pad pill">L3</kbd> <span class="hint">to latch until you stop</span></td></tr>
+              <tr><th scope="row">Jump</th><td><kbd class="pad pa">Cross</kbd></td></tr>
+              <tr><th scope="row">Interact <span class="sub">talk, dig, read, sleep, slip through windows, climb</span></th><td><kbd class="pad px">Square</kbd></td></tr>
+              <tr><th scope="row">Feed <span class="sub">Vampire</span></th><td><kbd class="pad px">Square</kbd> <span class="hint">hold</span></td></tr>
+              <tr><th scope="row">Transform <span class="sub">Human &harr; Vampire</span></th><td><kbd class="pad py">Triangle</kbd></td></tr>
+              <tr><th scope="row">Vampiric Sense <span class="sub">Vampire, toggle</span></th><td><kbd class="pad pill">L1</kbd> <span class="or">or</span> <kbd class="pad pill">R3</kbd></td></tr>
+              <tr><th scope="row">Continue a Blood Memory</th><td><kbd class="pad pa">Cross</kbd><kbd class="pad pb">Circle</kbd><kbd class="pad px">Square</kbd></td></tr>
+              <tr><th scope="row">Choose when to wake <span class="sub">at the coffin</span></th><td><kbd class="pad pill">D-pad</kbd> <span class="or">+</span> <kbd class="pad pa">Cross</kbd> <span class="hint"><kbd class="pad pb">Circle</kbd> stays awake</span></td></tr>
+              <tr><th scope="row">Pause</th><td><kbd class="pad pill">Options</kbd></td></tr>
+              <tr><th scope="row">Controls screen</th><td><kbd class="pad pill">Create</kbd></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="ctl-note">
+          <strong>Menus:</strong> arrows, D-pad or left stick to move &middot; <kbd class="inline">Enter</kbd> / A / Cross to accept &middot; <kbd class="inline">Esc</kbd> / B / Circle to go back.
+          <br>
+          <strong>Honest note:</strong> controller support is built and tested with simulated pad input, but it hasn't been tried on physical controllers yet.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ STATUS -->
+  <section class="section section-alt" id="status" aria-labelledby="status-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Development Status</p>
+        <h2 id="status-title">A prototype, still being built</h2>
+        <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
+      </header>
+
+      <div class="callout reveal">
+        <span class="callout-tag">Public development build</span>
+        <p>
+          This is <strong>not the finished game</strong> &mdash; it's an early prototype, shared openly while it's made.
+          The world is a single greybox location, the audio is placeholder, and there are rough edges. Expect things to
+          change, break and be rebuilt. The browser version of the game isn't available yet.
+        </p>
+      </div>
+
+      <ol class="timeline reveal" aria-label="Development milestones">
+        <li class="done"><span class="t-mark" aria-hidden="true"></span><span class="t-name">Task 1</span><span class="t-desc">The core loop works</span></li>
+        <li class="done"><span class="t-mark" aria-hidden="true"></span><span class="t-name">Task 1.5</span><span class="t-desc">It interacts: day/night, sun, routines</span></li>
+        <li class="done"><span class="t-mark" aria-hidden="true"></span><span class="t-name">Task 1.75</span><span class="t-desc">It feels like something</span></li>
+        <li class="now"><span class="t-mark" aria-hidden="true"></span><span class="t-name">Task 1.8 <em>current</em></span><span class="t-desc">Reliable, purposeful world &amp; traversal</span></li>
+        <li class="next"><span class="t-mark" aria-hidden="true"></span><span class="t-name">Browser build <em>planned</em></span><span class="t-desc">Play in your browser from this site</span></li>
+      </ol>
+
+      <div class="status-cols">
+        <div class="status-col reveal">
+          <h3>Not in yet &mdash; on purpose</h3>
+          <ul>
+            <li>Wolf / Bat forms</li>
+            <li>Combat</li>
+            <li>Quests</li>
+            <li>Inventory &amp; crafting</li>
+            <li>Skill trees</li>
+            <li>Turning people &amp; lineage</li>
+            <li>A large world</li>
+            <li>Save games</li>
+            <li>Multiplayer</li>
+            <li>A mod manager</li>
+          </ul>
+        </div>
+        <div class="status-col reveal" style="--d:70ms">
+          <h3>Known limits today</h3>
+          <ul>
+            <li>Greybox environment &mdash; no final art or UI</li>
+            <li>Placeholder procedural audio, no music</li>
+            <li>One small location: three people, two foxes</li>
+            <li>Simple NPC pathing</li>
+            <li>Traversal uses authored routes, not free climbing</li>
+            <li>Controllers not yet tried on hardware</li>
+            <li>No built executable or web build yet</li>
+          </ul>
+        </div>
+        <div class="status-col status-col-try reveal" style="--d:140ms">
+          <h3>Try it today</h3>
+          <p>The prototype runs from the Godot project:</p>
+          <ol>
+            <li>Install <strong>Godot 4.8</strong> (standard build).</li>
+            <li>Clone or download the <a href="https://github.com/madebynova/vampire-game" rel="noopener">repository</a>.</li>
+            <li>In Godot: <em>Import</em> &rarr; pick <code>project.godot</code>.</li>
+            <li>Press <kbd class="inline">F5</kbd>.</li>
+          </ol>
+          <p class="small"><a href="https://github.com/madebynova/vampire-game#open-and-run" rel="noopener">Full instructions in the README</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ LINKS -->
+  <section class="section" id="links" aria-labelledby="links-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Links &amp; Feedback</p>
+        <h2 id="links-title">Follow the build</h2>
+        <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
+      </header>
+
+      <div class="link-cards">
+        <div class="link-card is-soon reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></div>
+          <h3>Play Now</h3>
+          <p>Play in your browser. Not connected yet &mdash; the web build is planned.</p>
+          <a class="btn btn-play is-disabled js-play" role="button" aria-disabled="true" tabindex="0">
+            <span class="btn-text"><span class="btn-label">Play Now</span><span class="btn-sub">Web build coming soon</span></span>
+          </a>
+        </div>
+
+        <a class="link-card reveal" href="https://github.com/madebynova/vampire-game" rel="noopener" style="--d:70ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-code"/></svg></div>
+          <h3>GitHub</h3>
+          <p>The source, the changelog and the design notes. Where the game is actually made.</p>
+          <span class="link-go">madebynova/vampire-game <svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></span>
+        </a>
+
+        <a class="link-card reveal" href="https://github.com/madebynova/vampire-game/issues/new" rel="noopener" style="--d:140ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-bug"/></svg></div>
+          <h3>Bugs &amp; feedback</h3>
+          <p>Found a bug, or have a thought on how it feels? Open an issue. A free GitHub account is needed.</p>
+          <span class="link-go">Open an issue <svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></span>
+        </a>
+      </div>
+
+      <div class="feedback reveal">
+        <h3>Useful in a report</h3>
+        <ul>
+          <li>What you were doing, and what you expected</li>
+          <li>Whether you were Human or Vampire, and the in-game time</li>
+          <li>Your system and Godot version</li>
+          <li>Whether you used keyboard or a controller</li>
+        </ul>
+        <p class="small">
+          Also worth a read:
+          <a href="https://github.com/madebynova/vampire-game/blob/main/CHANGELOG.md" rel="noopener">Changelog</a> &middot;
+          <a href="https://github.com/madebynova/vampire-game/blob/main/docs/PROTOTYPE_NOTES.md" rel="noopener">Design notes</a>
+        </p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <div>
+      <p class="footer-brand">Vampire Game</p>
+      <p class="small">A prototype in active development. Built with Godot 4.8.</p>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/madebynova/vampire-game" rel="noopener">GitHub</a>
+      <a href="https://github.com/madebynova/vampire-game/issues" rel="noopener">Issues</a>
+      <a href="#top">Back to top</a>
+    </div>
+    <p class="small footer-legal">No license has been chosen yet; all rights are reserved by the author.</p>
+  </div>
+</footer>
+
+</body>
+</html>

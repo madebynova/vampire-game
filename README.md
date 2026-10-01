@@ -116,6 +116,51 @@ Exporting needs the Godot editor plus the matching **export templates**. The pro
 pass (the script reports the missing `windows_release_x86_64.exe` / `windows_debug_x86_64.exe`). Nothing was
 faked; see the notes for the state of the preset.
 
+## Website (GitHub Pages)
+The game's public home page lives in [`website/`](website/): plain static HTML, CSS and a little JavaScript. There is no
+build step and no dependencies, and it is separate from the Godot project (`website/.gdignore` keeps the Godot editor and
+exports from scanning it; nothing in the game reads it). It only describes things that exist in the prototype today and uses
+no screenshots or art that don't exist.
+
+**Status:** Phase 1. The page is written and tested locally, but **it has not been deployed yet** (GitHub Pages is not
+enabled on this repository). The **PLAY NOW** button is a deliberate placeholder: there is no Web export of the game yet.
+
+### View it locally
+```
+cd website
+python -m http.server 8000
+```
+Then open <http://localhost:8000>. (Opening `website/index.html` straight from disk also works.)
+
+### Deploying with GitHub Pages (intended, not set up yet)
+GitHub Pages can only publish a repository's root or its `docs/` folder from a branch, and `docs/` here holds the design
+notes, so the site is published from `website/` by the included workflow,
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml):
+
+1. Repository **Settings -> Pages -> Build and deployment -> Source: GitHub Actions**.
+2. **Actions** tab -> *Deploy website to GitHub Pages* -> **Run workflow**.
+3. The site should then be served at `https://madebynova.github.io/vampire-game/` (the usual project-page address).
+
+The workflow is manual (`workflow_dispatch`) for now so it cannot fail before Pages is enabled; to redeploy automatically on
+every push that touches `website/`, uncomment the `push:` trigger in the file. It has **not been run yet**, so treat the first
+run as its test. Every link and asset path on the site is relative, so it works under a project URL (`/vampire-game/`) as
+well as at a domain root.
+
+### Phase 2: connecting PLAY NOW (planned, not started)
+Godot project -> Web export -> browser testing -> host the Web build -> connect PLAY NOW. When there is a build to connect:
+
+- Put the Web export in `website/play/` (it needs an `index.html`).
+- In `website/index.html` set `data-play-url="play/"` on the `<html>` tag. Every PLAY NOW button becomes a real link and the
+  "not connected yet" note hides itself.
+- Update the remaining "coming soon" wording by hand: the Play card under Links, the *Browser build* step and the "no built
+  executable or web build" line under Development Status.
+
+Things to check when that work starts (none of this has been tried):
+- `.gitignore` ignores `*.pck`, so a Web export's data file would need an exception (or to be built in CI) to live under `website/play/`.
+- Godot's Web export has so far supported only the Compatibility renderer, while this project uses Forward+ and several custom
+  shaders (sky, Sense, screen effects); expect testing and adjustment. Confirm against the Godot 4.8 documentation.
+- GitHub Pages cannot set the cross-origin-isolation headers that threaded Web exports need, so use a single-threaded export.
+
 ## Tests and tools
 All are headless-capable (`godot --headless --path . <scene>`); replace `godot` with your Godot 4.8 binary.
 
@@ -155,6 +200,8 @@ tests/      unit, playthrough, scenario, feel tests and dev tools
 tools/      build_windows.ps1
 docs/       PROTOTYPE_NOTES.md (design notes), MODDING.md
 examples/   a working example mod
+website/    the public home page (static HTML/CSS/JS for GitHub Pages; not part of the game)
+.github/    workflows/pages.yml (manual deploy of website/)
 ```
 
 ## Limitations
