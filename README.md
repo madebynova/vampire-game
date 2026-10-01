@@ -116,14 +116,46 @@ Exporting needs the Godot editor plus the matching **export templates**. The pro
 pass (the script reports the missing `windows_release_x86_64.exe` / `windows_debug_x86_64.exe`). Nothing was
 faked; see the notes for the state of the preset.
 
+## Playtest ecosystem (website -> play -> feedback -> launcher -> updates)
+Beyond the game itself, this repository holds the pieces that turn it into something people can try:
+
+```
+website/   public home page + Player Feedback + Community Reports    (GitHub Pages)   docs/FEEDBACK_BACKEND.md
+   |
+   +-- PLAY NOW .......... browser build in website/play/            (planned, not built)
+   +-- DOWNLOAD LAUNCHER . launcher/ -> Windows .exe                  (foundation done, not published)
+                              |
+                              +-- reads GitHub Releases  ->  downloads VampireGame-Windows-vX.Y.Z.zip  ->  verifies  ->  installs
+VERSION    the one game version number; tools/package_release.ps1 turns an export into a release     docs/RELEASING.md
+supabase/  the feedback database schema (Row Level Security)
+```
+
+| Piece | State today |
+|---|---|
+| Website, feedback forms, community list | built and tested (against a stand-in server); **not deployed** |
+| Feedback database | schema written; **no Supabase project exists yet**, so the site shows "feedback temporarily unavailable" |
+| Launcher (`launcher/`) | logic + window built, 26 tests pass; **no `.exe` built, no game release to install yet** |
+| Release tooling (`tools/package_release.ps1`) | tested with a stand-in build; **no real Windows export has been made** |
+| Browser build | **not started** |
+
+Guides: [`docs/FEEDBACK_BACKEND.md`](docs/FEEDBACK_BACKEND.md) (set up the database), [`docs/RELEASING.md`](docs/RELEASING.md)
+(versions, publishing the game / launcher / browser build, how updates reach players, where saves live),
+[`launcher/README.md`](launcher/README.md). Checks that need no Godot: `python tools/check_repo.py`,
+`node tools/check_site.js website`, and the launcher tests (also run by `.github/workflows/ci.yml`).
+
 ## Website (GitHub Pages)
 The game's public home page lives in [`website/`](website/): plain static HTML, CSS and a little JavaScript. There is no
 build step and no dependencies, and it is separate from the Godot project (`website/.gdignore` keeps the Godot editor and
 exports from scanning it; nothing in the game reads it). It only describes things that exist in the prototype today and uses
-no screenshots or art that don't exist.
+no screenshots or art that don't exist. Besides the game description it has a **Play** section (browser build + launcher), a
+**Player Feedback** hub (report a bug / submit an idea, anonymous allowed) and **Community Reports** (public list with
+statuses). Feedback is stored in Supabase; see [`docs/FEEDBACK_BACKEND.md`](docs/FEEDBACK_BACKEND.md). Its public settings are in
+`website/assets/js/config.js` and must never contain a secret key.
 
-**Status:** Phase 1. The page is written and tested locally, but **it has not been deployed yet** (GitHub Pages is not
-enabled on this repository). The **PLAY NOW** button is a deliberate placeholder: there is no Web export of the game yet.
+**Status:** the page is written and tested locally, but **it has not been deployed yet** (GitHub Pages is not
+enabled on this repository). The **PLAY NOW** and **DOWNLOAD LAUNCHER** buttons are deliberate placeholders: there is no Web
+export and no launcher release yet. Each is switched on by one attribute on `<html>` in `website/index.html`
+(`data-play-url`, `data-launcher-url`).
 
 ### View it locally
 ```
@@ -152,8 +184,8 @@ Godot project -> Web export -> browser testing -> host the Web build -> connect 
 - Put the Web export in `website/play/` (it needs an `index.html`).
 - In `website/index.html` set `data-play-url="play/"` on the `<html>` tag. Every PLAY NOW button becomes a real link and the
   "not connected yet" note hides itself.
-- Update the remaining "coming soon" wording by hand: the Play card under Links, the *Browser build* step and the "no built
-  executable or web build" line under Development Status.
+- Update the remaining "coming soon" wording by hand: the browser card and footnote in the Play section, the Play card under
+  Links, the *Browser build* step and the "no built executable or web build" line under Development Status.
 
 Things to check when that work starts (none of this has been tried):
 - `.gitignore` ignores `*.pck`, so a Web export's data file would need an exception (or to be built in CI) to live under `website/play/`.
@@ -197,11 +229,14 @@ scripts/    core (registry, input, settings, audio, haptics, pause), data, playe
 scenes/     title, main, player, npc, props
 shaders/    sky, sense, screen effects
 tests/      unit, playthrough, scenario, feel tests and dev tools
-tools/      build_windows.ps1
+tools/      build_windows.ps1, sync_version.ps1, package_release.ps1 (release zip), check_repo.py, check_site.js
 docs/       PROTOTYPE_NOTES.md (design notes), MODDING.md
 examples/   a working example mod
-website/    the public home page (static HTML/CSS/JS for GitHub Pages; not part of the game)
-.github/    workflows/pages.yml (manual deploy of website/)
+website/    the public home page, feedback hub and community reports (static HTML/CSS/JS for GitHub Pages; not part of the game)
+launcher/   the Windows launcher: installs the game and updates it from GitHub Releases (Python, separate from the game)
+supabase/   feedback_schema.sql: the feedback database and its security rules
+VERSION     the game's version (single source of truth for releases)
+.github/    workflows/pages.yml (manual deploy of website/), ci.yml (checks that need no Godot)
 ```
 
 ## Limitations

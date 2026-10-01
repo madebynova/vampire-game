@@ -88,9 +88,10 @@
     });
   });
 
-  /* ------------------------------------------------------------ Controls tabs */
-  var tabs = $$('.tab');
-  if (tabs.length) {
+  /* ------------------------------------------------------------ Tabs (controls, feedback hub)
+   * Every .tabs[role=tablist] group is independent: its tabs point at panels with aria-controls. */
+  $$('.tabs[role="tablist"]').forEach(function (group) {
+    var tabs = $$('.tab', group);
     var panels = tabs.map(function (t) { return doc.getElementById(t.getAttribute('aria-controls')); });
     var select = function (index, focus) {
       tabs.forEach(function (t, i) {
@@ -113,34 +114,41 @@
       });
     });
     select(0);
-  }
-
-  /* ------------------------------------------------------------ Play Now
-   * The Godot Web export is not connected yet, so every .js-play button is a placeholder.
-   * PHASE 2: set data-play-url="play/" on <html> (index.html) and they all become real links. */
-  var playUrl = (root.getAttribute('data-play-url') || '').trim();
-  if (playUrl) $$('.play-note').forEach(function (n) { n.hidden = true; });
-  $$('.js-play').forEach(function (btn) {
-    var sub = $('.btn-sub', btn);
-    if (playUrl) {
-      btn.setAttribute('href', playUrl);
-      btn.removeAttribute('role');
-      btn.removeAttribute('aria-disabled');
-      btn.removeAttribute('tabindex');
-      btn.classList.remove('is-disabled');
-      if (sub) sub.textContent = 'Play in your browser';
-      return;
-    }
-    function nudge(e) {
-      if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      btn.classList.remove('nudge');
-      void btn.offsetWidth; // restart the animation
-      btn.classList.add('nudge');
-    }
-    btn.addEventListener('click', nudge);
-    btn.addEventListener('keydown', nudge);
   });
+
+  /* ------------------------------------------------------------ Play Now / Download Launcher
+   * Neither the Godot Web export nor a launcher release is connected yet, so these buttons are
+   * placeholders. They are switched on from <html> (index.html), nothing else needs editing:
+   *   PHASE 2:  data-play-url="play/"            -> every .js-play becomes a link to the web build
+   *   LAUNCHER: data-launcher-url="https://..."  -> the .js-launcher button becomes the download link */
+  function wirePlaceholder(selector, url, liveText) {
+    $$(selector).forEach(function (btn) {
+      var sub = $('.btn-sub', btn);
+      if (url) {
+        btn.setAttribute('href', url);
+        btn.removeAttribute('role');
+        btn.removeAttribute('aria-disabled');
+        btn.removeAttribute('tabindex');
+        btn.classList.remove('is-disabled');
+        if (sub) sub.textContent = liveText;
+        return;
+      }
+      function nudge(e) {
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        btn.classList.remove('nudge');
+        void btn.offsetWidth; // restart the animation
+        btn.classList.add('nudge');
+      }
+      btn.addEventListener('click', nudge);
+      btn.addEventListener('keydown', nudge);
+    });
+  }
+  var playUrl = (root.getAttribute('data-play-url') || '').trim();
+  var launcherUrl = (root.getAttribute('data-launcher-url') || '').trim();
+  if (playUrl) $$('.play-note').forEach(function (n) { n.hidden = true; });
+  wirePlaceholder('.js-play', playUrl, 'Play in your browser');
+  wirePlaceholder('.js-launcher', launcherUrl, 'Windows installer');
 
   /* ------------------------------------------------------------ Embers
    * Slow red sparks drifting up, echoing the game's title screen. Capped, pauses when the hero is

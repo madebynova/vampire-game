@@ -36,3 +36,11 @@ desktop.ini
 *.key
 *.pem
 secrets*
+
+# Release packaging output (distribute via GitHub Releases, never commit)
+/dist/
+/launcher/dist/
+/launcher/build/
+*.spec
+__pycache__/
+*.pyc

@@ -1,0 +1,39 @@
+name: Checks
+
+# Fast checks that need no Godot: website links/assets, version consistency, "no secrets committed",
+# and the launcher's tests. (The Godot game itself is tested with the scenes in tests/, see the README.)
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  repo-and-site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Versions agree and no secrets are committed
+        run: python tools/check_repo.py
+      - name: Website links, assets and paths resolve
+        run: node tools/check_site.js website
+
+  launcher-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Launcher tests (fake GitHub release server, install/update/rollback)
+        working-directory: launcher
+        run: python -m unittest discover -s tests -t . -v

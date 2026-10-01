@@ -7,8 +7,15 @@
   PHASE 2 HOOK: when the Godot Web export is hosted (planned at ./play/), set
       data-play-url="play/"
   on the <html> tag below and every PLAY NOW button becomes a real link. Nothing else needs to change.
+
+  LAUNCHER HOOK: once a launcher release exists on GitHub, set data-launcher-url to the exe's download
+  URL (see docs/RELEASING.md) and the DOWNLOAD LAUNCHER button becomes a real link.
+
+  FEEDBACK: the feedback forms and community reports talk to Supabase. Their public settings live in
+  assets/js/config.js (see docs/FEEDBACK_BACKEND.md). Until that is filled in, the site shows
+  "feedback is temporarily unavailable" and everything else works normally.
 -->
-<html lang="en" data-play-url="">
+<html lang="en" data-play-url="" data-launcher-url="">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -22,7 +29,9 @@
   <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/css/style.css">
   <script>document.documentElement.classList.add('js');</script>
+  <script src="assets/js/config.js"></script>
   <script src="assets/js/main.js" defer></script>
+  <script src="assets/js/feedback.js" defer></script>
 </head>
 <body>
 
@@ -42,6 +51,8 @@
     <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5Z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></symbol>
     <symbol id="i-out" viewBox="0 0 24 24"><path d="M7 17 17 7M9 7h8v8"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 19h14"/></symbol>
+    <symbol id="i-idea" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.100c0-.800.4-1.5 1-2A6 6 0 0 0 12 3Z"/></symbol>
     <symbol id="i-bug" viewBox="0 0 24 24"><path d="M9 7.5a3 3 0 0 1 6 0M7 11h10v3.5a5 5 0 0 1-10 0Z"/><path d="M12 11v8.5M3.5 11.5 7 13M20.5 11.5 17 13M4 18l3-1.5M20 18l-3-1.5"/></symbol>
   </defs>
 </svg>
@@ -65,6 +76,8 @@
         <li><a href="#about">The Prototype</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#controls">Controls</a></li>
+        <li><a href="#play">Play</a></li>
+        <li><a href="#feedback">Feedback</a></li>
         <li><a href="#status">Status</a></li>
         <li><a href="#links">Links</a></li>
       </ul>
@@ -399,6 +412,205 @@
     </div>
   </section>
 
+  <!-- ============================================================ PLAY -->
+  <section class="section section-alt" id="play" aria-labelledby="play-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Play</p>
+        <h2 id="play-title">Play Vampire Game</h2>
+        <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
+        <p class="section-sub">Two ways in. Both are being prepared &mdash; neither is available yet, and nothing here is faked.</p>
+      </header>
+
+      <div class="play-grid">
+        <article class="play-card reveal">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></div>
+          <p class="play-kicker">In your browser</p>
+          <h3>Browser playtest</h3>
+          <p class="play-copy">Jump straight in with no install. A browser build of the prototype is planned; when it is hosted here, this button will start it.</p>
+          <div class="play-actions">
+            <a class="btn btn-play btn-xl is-disabled js-play" role="button" aria-disabled="true" tabindex="0">
+              <svg class="ico" aria-hidden="true"><use href="#i-play"/></svg>
+              <span class="btn-text"><span class="btn-label">Play Now</span><span class="btn-sub">Web build coming soon</span></span>
+            </a>
+          </div>
+        </article>
+
+        <article class="play-card play-card-launcher reveal" style="--d:100ms">
+          <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg></div>
+          <p class="play-kicker">For Windows</p>
+          <h3>Vampire Game Launcher</h3>
+          <p class="play-copy">The full Windows game uses the official launcher. Install the launcher once and let it keep your game updated automatically.</p>
+          <ul class="mini-list">
+            <li>Installs the Windows game for you</li>
+            <li>Checks GitHub Releases for new versions</li>
+            <li>Updates with one click</li>
+            <li>Keeps your settings and saves separate &mdash; updates never wipe them</li>
+          </ul>
+          <div class="play-actions">
+            <a class="btn btn-play btn-xl is-disabled js-launcher" role="button" aria-disabled="true" tabindex="0">
+              <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>
+              <span class="btn-text"><span class="btn-label">Download Launcher</span><span class="btn-sub">Coming soon</span></span>
+            </a>
+            <a class="btn btn-ghost" href="https://github.com/madebynova/vampire-game/releases" rel="noopener">
+              <span class="btn-text"><span class="btn-label">View Releases</span></span>
+              <svg class="ico" aria-hidden="true"><use href="#i-out"/></svg>
+            </a>
+          </div>
+        </article>
+      </div>
+      <p class="play-footnote reveal">No launcher or Windows build has been published yet. Releases are where they will appear, and the launcher will update the game from there.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ FEEDBACK -->
+  <section class="section" id="feedback" aria-labelledby="feedback-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Player Feedback</p>
+        <h2 id="feedback-title">Help shape the night</h2>
+        <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
+        <p class="section-sub">Found a bug, or have an idea? Tell us. Reports are public so everyone can see what is already known. You never need to give your name.</p>
+      </header>
+
+      <div class="fb-unavailable" id="fb-unavailable" role="status" hidden>
+        <strong>Feedback is temporarily unavailable.</strong>
+        The feedback service isn't switched on yet, so reports can't be sent or listed right now. The rest of the site works as normal.
+        In the meantime you can <a href="https://github.com/madebynova/vampire-game/issues/new" rel="noopener">open a GitHub issue</a>.
+      </div>
+      <noscript><p class="fb-unavailable"><strong>Feedback needs JavaScript.</strong> You can still <a href="https://github.com/madebynova/vampire-game/issues/new" rel="noopener">open a GitHub issue</a>.</p></noscript>
+
+      <div class="hub reveal">
+        <div class="tabs" role="tablist" aria-label="Kind of feedback">
+          <button class="tab" type="button" role="tab" id="tab-bug" aria-controls="panel-bug" aria-selected="true"><svg class="ico" aria-hidden="true"><use href="#i-bug"/></svg>Report a bug</button>
+          <button class="tab" type="button" role="tab" id="tab-idea" aria-controls="panel-idea" aria-selected="false" tabindex="-1"><svg class="ico" aria-hidden="true"><use href="#i-idea"/></svg>Submit an idea</button>
+        </div>
+
+        <!-- ------------------------------------------------ bug -->
+        <div class="panel" id="panel-bug" role="tabpanel" aria-labelledby="tab-bug">
+          <form class="fb-form" id="bug-form" data-kind="bug" novalidate>
+            <fieldset>
+              <legend class="sr-only">Report a bug</legend>
+              <div class="field">
+                <label for="bug-title">Short title <span class="req">required</span></label>
+                <input id="bug-title" name="title" type="text" maxlength="120" required placeholder="e.g. Vampire gets stuck near the estate window">
+              </div>
+              <div class="field">
+                <label for="bug-what">What happened? <span class="req">required</span></label>
+                <textarea id="bug-what" name="description" rows="4" maxlength="4000" required placeholder="Describe the problem in your own words."></textarea>
+              </div>
+              <div class="field">
+                <label for="bug-doing">What were you doing when it happened?</label>
+                <textarea id="bug-doing" name="context" rows="3" maxlength="2000" placeholder="Human or Vampire? What time of day? What had you just done?"></textarea>
+              </div>
+              <div class="field">
+                <label for="bug-steps">Steps to reproduce</label>
+                <textarea id="bug-steps" name="reproduction_steps" rows="3" maxlength="3000" placeholder="1. &hellip;&#10;2. &hellip;&#10;3. &hellip;"></textarea>
+              </div>
+              <div class="field">
+                <label for="bug-expected">Expected behavior</label>
+                <textarea id="bug-expected" name="expected_behavior" rows="2" maxlength="2000" placeholder="What did you think should happen?"></textarea>
+              </div>
+              <div class="field">
+                <label for="bug-file">Screenshot or video <span class="opt">optional</span></label>
+                <input id="bug-file" name="attachment" type="file" accept="image/png,image/jpeg,image/gif,image/webp,video/mp4,video/webm">
+                <p class="hint-text">PNG, JPG, GIF, WebP, MP4 or WebM, up to 10 MB. Only the developer can see uploads; they are not shown on the public list.</p>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="bug-name">Your name <span class="opt">optional</span></label>
+                  <input id="bug-name" name="submitter_name" type="text" maxlength="40" autocomplete="nickname" placeholder="e.g. Nova">
+                </div>
+                <div class="field field-check">
+                  <label class="check"><input type="checkbox" name="anonymous"><span>Submit anonymously <small>(shown as &ldquo;Anonymous Player&rdquo;)</small></span></label>
+                </div>
+              </div>
+              <div class="hp" aria-hidden="true"><label>Leave this empty <input type="text" name="company" tabindex="-1" autocomplete="off"></label></div>
+              <div class="form-actions">
+                <button class="btn btn-play" type="submit"><span class="btn-text"><span class="btn-label">Submit bug report</span></span></button>
+                <p class="form-msg" role="status" aria-live="polite"></p>
+              </div>
+            </fieldset>
+          </form>
+        </div>
+
+        <!-- ------------------------------------------------ idea -->
+        <div class="panel" id="panel-idea" role="tabpanel" aria-labelledby="tab-idea">
+          <form class="fb-form" id="idea-form" data-kind="idea" novalidate>
+            <fieldset>
+              <legend class="sr-only">Submit an idea</legend>
+              <div class="field">
+                <label for="idea-title">Idea title <span class="req">required</span></label>
+                <input id="idea-title" name="title" type="text" maxlength="120" required placeholder="e.g. Add more vampire abilities">
+              </div>
+              <div class="field">
+                <label for="idea-what">Describe your idea <span class="req">required</span></label>
+                <textarea id="idea-what" name="description" rows="5" maxlength="4000" required placeholder="What would it be, and how would it work?"></textarea>
+              </div>
+              <div class="field">
+                <label for="idea-why">Why would this improve the game?</label>
+                <textarea id="idea-why" name="idea_benefit" rows="3" maxlength="2000" placeholder="What would it add to being a vampire?"></textarea>
+              </div>
+              <div class="field-row">
+                <div class="field">
+                  <label for="idea-name">Your name <span class="opt">optional</span></label>
+                  <input id="idea-name" name="submitter_name" type="text" maxlength="40" autocomplete="nickname" placeholder="e.g. Nova">
+                </div>
+                <div class="field field-check">
+                  <label class="check"><input type="checkbox" name="anonymous"><span>Submit anonymously <small>(shown as &ldquo;Anonymous Player&rdquo;)</small></span></label>
+                </div>
+              </div>
+              <div class="hp" aria-hidden="true"><label>Leave this empty <input type="text" name="company" tabindex="-1" autocomplete="off"></label></div>
+              <div class="form-actions">
+                <button class="btn btn-play" type="submit"><span class="btn-text"><span class="btn-label">Submit idea</span></span></button>
+                <p class="form-msg" role="status" aria-live="polite"></p>
+              </div>
+            </fieldset>
+          </form>
+        </div>
+
+        <p class="fine">Submissions are public (without any contact details). Please don't include personal information, passwords or links to anything private. Prefer GitHub? <a href="https://github.com/madebynova/vampire-game/issues/new" rel="noopener">Open an issue</a> instead.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ COMMUNITY REPORTS -->
+  <section class="section section-alt" id="community" aria-labelledby="community-title">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Community Reports</p>
+        <h2 id="community-title">What players have said</h2>
+        <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
+        <p class="section-sub">Bugs and ideas from players. The status shows where each one stands.</p>
+      </header>
+
+      <div class="community reveal">
+        <div class="community-bar">
+          <div class="tabs" role="group" aria-label="Report type">
+            <button class="tab" type="button" data-type="bug" aria-pressed="true">Bug reports</button>
+            <button class="tab" type="button" data-type="idea" aria-pressed="false">Game ideas</button>
+          </div>
+          <label class="filter">
+            <span class="sr-only">Filter by status</span>
+            <select id="status-filter">
+              <option value="">All statuses</option>
+              <option value="new">New</option>
+              <option value="investigating">Investigating</option>
+              <option value="planned">Planned</option>
+              <option value="in_progress">In Progress</option>
+              <option value="fixed">Fixed</option>
+              <option value="closed">Closed</option>
+            </select>
+          </label>
+        </div>
+        <div class="report-list" id="report-list" aria-live="polite" aria-busy="false">
+          <p class="list-note">Loading reports&hellip;</p>
+        </div>
+        <div class="list-more"><button class="btn btn-ghost" type="button" id="more-reports" hidden><span class="btn-text"><span class="btn-label">Load more</span></span></button></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============================================================ STATUS -->
   <section class="section section-alt" id="status" aria-labelledby="status-title">
     <div class="wrap">
@@ -481,7 +693,7 @@
         <div class="link-card is-soon reveal">
           <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></div>
           <h3>Play Now</h3>
-          <p>Play in your browser. Not connected yet &mdash; the web build is planned.</p>
+          <p>Play in your browser, or get the Windows launcher. Neither is available yet; see <a href="#play">Play</a>.</p>
           <a class="btn btn-play is-disabled js-play" role="button" aria-disabled="true" tabindex="0">
             <span class="btn-text"><span class="btn-label">Play Now</span><span class="btn-sub">Web build coming soon</span></span>
           </a>
@@ -494,11 +706,11 @@
           <span class="link-go">madebynova/vampire-game <svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></span>
         </a>
 
-        <a class="link-card reveal" href="https://github.com/madebynova/vampire-game/issues/new" rel="noopener" style="--d:140ms">
+        <a class="link-card reveal" href="#feedback" style="--d:140ms">
           <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-bug"/></svg></div>
-          <h3>Bugs &amp; feedback</h3>
-          <p>Found a bug, or have a thought on how it feels? Open an issue. A free GitHub account is needed.</p>
-          <span class="link-go">Open an issue <svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></span>
+          <h3>Bugs &amp; ideas</h3>
+          <p>Found a bug, or have a thought on how it feels? Tell us on this page &mdash; no account needed, and you can stay anonymous.</p>
+          <span class="link-go">Open the feedback hub <svg class="ico" aria-hidden="true"><use href="#i-out"/></svg></span>
         </a>
       </div>
 
@@ -512,6 +724,8 @@
         </ul>
         <p class="small">
           Also worth a read:
+          <a href="https://github.com/madebynova/vampire-game/releases" rel="noopener">Releases</a> &middot;
+          <a href="https://github.com/madebynova/vampire-game/issues/new" rel="noopener">GitHub issues</a> &middot;
           <a href="https://github.com/madebynova/vampire-game/blob/main/CHANGELOG.md" rel="noopener">Changelog</a> &middot;
           <a href="https://github.com/madebynova/vampire-game/blob/main/docs/PROTOTYPE_NOTES.md" rel="noopener">Design notes</a>
         </p>
@@ -528,7 +742,8 @@
     </div>
     <div class="footer-links">
       <a href="https://github.com/madebynova/vampire-game" rel="noopener">GitHub</a>
-      <a href="https://github.com/madebynova/vampire-game/issues" rel="noopener">Issues</a>
+      <a href="#feedback">Feedback</a>
+      <a href="https://github.com/madebynova/vampire-game/releases" rel="noopener">Releases</a>
       <a href="#top">Back to top</a>
     </div>
     <p class="small footer-legal">No license has been chosen yet; all rights are reserved by the author.</p>
