@@ -30,6 +30,10 @@ extends ContentDef
 ## Replaces greetings after dark.
 @export var night_lines: PackedStringArray = PackedStringArray()
 
+@export_group("Things they can tell you")
+## What they know, in the order they will tell it (see Tiding).
+@export var tidings: Array[Tiding] = []
+
 @export_group("Blood")
 ## Id of a BloodDefinition (content/blood): colour in Sense, yield multiplier, name in the memory panel.
 @export var blood_type: StringName = &"common"

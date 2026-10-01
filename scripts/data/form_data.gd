@@ -9,7 +9,13 @@ extends ContentDef
 @export var walk_speed := 3.0
 @export var run_speed := 5.5
 @export var jump_velocity := 6.0
+## How quickly the body reaches the speed you ask for (m/s per second) ...
 @export var acceleration := 14.0
+## ... how quickly it sheds speed when you let go, slow down or reverse (much higher, so stopping is
+## crisp rather than skating) ...
+@export var deceleration := 48.0
+## ... and how quickly sideways drift is cancelled when you turn (so a turn bites instead of sliding).
+@export var turn_grip := 40.0
 
 @export_group("Rules")
 @export var sun_vulnerable := false

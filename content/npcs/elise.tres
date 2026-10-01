@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="NpcProfile" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="NpcProfile" load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/npc_profile.gd" id="1_prof"]
 [ext_resource type="Script" path="res://scripts/data/blood_memory.gd" id="2_mem"]
 [ext_resource type="Script" path="res://scripts/data/schedule_entry.gd" id="3_sch"]
+[ext_resource type="Script" path="res://scripts/data/tiding.gd" id="4_tid"]
 
 [sub_resource type="Resource" id="mem_calm"]
 script = ExtResource("2_mem")
@@ -24,6 +25,48 @@ condition = &"afraid"
 title = "Crescent and Three Nails"
 text = "Fear scours everything but one image, bright as a brand: an iron hatch, a crescent moon cut into it, three nails driven through the crescent. Her hand is on it. It is warm.\n\nIt should not be warm."
 facts = PackedStringArray("The cellar hatch is marked with a crescent and three nails.", "Something beneath it is warm.")
+
+[sub_resource type="Resource" id="mem_trusting"]
+script = ExtResource("2_mem")
+condition = &"trusting"
+title = "The Hem"
+text = "Lamplight, and a needle that will not keep still. You are stitching a name into the hem of a small white gown, E. MARR in red thread, so the child will not be lost.\n\nThe needle slips. A bead of blood on the cloth. In the next room someone laughs, a small high sound, and you press a hand over your mouth and do not know why you are crying."
+facts = PackedStringArray("Elise stitched the name E. Marr into a child's gown.", "E. Marr is the last name in Tomas's ledger.")
+
+[sub_resource type="Resource" id="td_lamps"]
+script = ExtResource("4_tid")
+id = &"lamps"
+text = "Don't walk the road alone after dark. The watchman counts nine lamps every night and swears he has never once seen all nine lit."
+learned = "The watchman counts nine lamps and swears they go out one by one."
+
+[sub_resource type="Resource" id="td_lantern"]
+script = ExtResource("4_tid")
+id = &"lantern"
+text = "There's a light that moves behind the manor's broken windows, and nobody walks up the road to carry it. I watch it from the gatehouse slit."
+learned = "A lantern moves inside the manor at night, though nobody goes in by the road."
+when = &"night"
+
+[sub_resource type="Resource" id="td_tomas"]
+script = ExtResource("4_tid")
+id = &"tomas"
+text = "Tomas Reeve keeps the grounds. He won't go near the well after dark and he never looks at the house. Ask him about it and he talks about the weather."
+learned = "Tomas Reeve, the groundskeeper, is afraid of something at the well and in the house."
+min_trust = 1
+introduces = &"tomas"
+
+[sub_resource type="Resource" id="td_lullaby"]
+script = ExtResource("4_tid")
+id = &"lullaby"
+text = "I'm told I hum in my sleep. A tune I never learned. I'd rather not sleep this close to the manor, that's all."
+learned = "Elise hums an unknown lullaby in her sleep. A dream waits in her blood while she sleeps."
+min_trust = 2
+
+[sub_resource type="Resource" id="mem_deep"]
+script = ExtResource("2_mem")
+condition = &"deep"
+title = "The Door at the Bottom"
+text = "You are small, and counting stairs, and a warm hand holds yours. Your mother is humming the tune. She does not stop humming when the door at the bottom opens.\n\nThat is the part you will never forgive. Not the dark, and not the cold, and not the voices counting. That she did not stop."
+facts = PackedStringArray("As a child Elise was led down the cellar stairs.", "Her mother kept humming when the door opened.")
 
 [sub_resource type="Resource" id="sch_day"]
 script = ExtResource("3_sch")
@@ -69,8 +112,9 @@ greeting_lines = PackedStringArray("Oh! You startled me. Are you with the house?
 familiar_lines = PackedStringArray("I can't stay indoors after dark. I sit by the door with the lantern and watch the manor. I sleep when the moon is high, if I sleep at all.")
 trust_lines = PackedStringArray("You're kind. Would you walk me toward the road? I'd feel safer.", "Of course. Lead on.")
 night_lines = PackedStringArray("Who's there?! ...Oh. Forgive me. The dark makes everyone a stranger.")
+tidings = Array[ExtResource("4_tid")]([SubResource("td_lamps"), SubResource("td_lantern"), SubResource("td_tomas"), SubResource("td_lullaby")])
 blood_type = &"bright"
 blood_description = "Bright and restless. Lavender, thread-oil, and fear she has swallowed."
 blood_yield = 35.0
-memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid")])
+memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid"), SubResource("mem_trusting"), SubResource("mem_deep")])
 schedule = Array[ExtResource("3_sch")]([SubResource("sch_day"), SubResource("sch_watch"), SubResource("sch_sleep")])

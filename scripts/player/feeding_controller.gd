@@ -8,10 +8,10 @@ extends PlayerComponent
 ## gives the richest dream; someone unaware is steady; a terrified victim fights, screams, carries
 ## further and pays more - and anyone who SEES it, panics.
 
-signal feed_started(npc: HumanNpc)
+signal feed_started(npc: FeedSource)
 signal feed_progress(progress: float)
-signal feed_completed(npc: HumanNpc, result: Dictionary)
-signal feed_interrupted(npc: HumanNpc, progress: float)
+signal feed_completed(npc: FeedSource, result: Dictionary)
+signal feed_interrupted(npc: FeedSource, progress: float)
 ## Someone saw (or heard) the feeding and was sent running.
 signal witnessed(count: int)
 
@@ -24,12 +24,13 @@ signal witnessed(count: int)
 ## How often bystanders are re-checked while feeding (seconds); heard noise accrues per second.
 const WITNESS_INTERVAL := 0.6
 
-var target: HumanNpc
+var target: FeedSource
 var progress := 0.0
 var style: FeedStyle
 ## People sent running by this feed so far.
 var witness_count := 0
 var _elapsed := 0.0
+var _duration := 3.6
 var _yield_per_sec := 0.0
 var _beat_timer := 0.0
 var _witness_timer := 0.0
@@ -43,11 +44,16 @@ func is_feeding() -> bool:
 	return target != null
 
 
-func can_feed(npc: HumanNpc) -> bool:
+## 0..1: how far the vampire bends over what they are drinking from (a fox on the ground, not a person).
+func crouch_amount() -> float:
+	return target.feed_crouch() if target != null else 0.0
+
+
+func can_feed(npc: FeedSource) -> bool:
 	return target == null and player.form.current.can_feed and npc.can_be_fed() and player.state.can_act()
 
 
-func start(npc: HumanNpc) -> void:
+func start(npc: FeedSource) -> void:
 	if not can_feed(npc):
 		return
 	target = npc
@@ -59,16 +65,16 @@ func start(npc: HumanNpc) -> void:
 	player.state.set_mode(PlayerState.Mode.FEEDING)
 	npc.begin_feed(player)
 	style = npc.feed_style()
-	_yield_per_sec = npc.get_feed_result()["yield"] / duration
+	_duration = npc.feed_seconds() if npc.feed_seconds() > 0.0 else duration
+	_yield_per_sec = npc.get_feed_result()["yield"] / _duration
 
 	var away := player.global_position - npc.global_position
 	away.y = 0.0
 	away = away.normalized() if away.length() > 0.05 else Vector3.BACK
-	var lying := npc.is_lying()
-	var stand := npc.global_position + away * (1.15 if lying else 0.85)
+	var stand := npc.global_position + away * npc.feed_stand_distance() + Vector3(away.z, 0.0, -away.x) * npc.feed_stand_side()
 	create_tween().tween_property(player, "global_position", Vector3(stand.x, player.global_position.y, stand.z), 0.2)
 	player.face_toward(npc.global_position)
-	player.camera_rig.set_focus(npc.global_position + Vector3(0, 0.9 if lying else 1.45, 0), 2.6 if lying else 2.3, 56.0)
+	player.camera_rig.set_focus(npc.global_position + Vector3(0, npc.feed_focus_height(), 0), npc.feed_camera_distance(), 56.0, npc.feed_camera_pitch(), npc.feed_camera_yaw())
 	player.camera_rig.add_shake(0.05 + style.camera_shake * 3.0)
 	player.sunlight.set_heat_modifier(&"feeding", sun_heat_multiplier)
 	# The bite and the drinking: hushed over a sleeper, loud over a screamer.
@@ -90,7 +96,7 @@ func _process(delta: float) -> void:
 	if _elapsed > min_hold and not Input.is_action_pressed(&"feed"):
 		_interrupt()
 		return
-	progress = minf(progress + delta / duration, 1.0)
+	progress = minf(progress + delta / _duration, 1.0)
 	player.blood.add(_yield_per_sec * delta)
 	target.feed_tick(progress)
 	if style.camera_shake > 0.0:
@@ -151,7 +157,8 @@ func _complete() -> void:
 	player.state.set_mode(PlayerState.Mode.NORMAL)
 	if result["reveals"] != &"":
 		get_tree().call_group(&"secrets", &"reveal", result["reveals"])
-	# The reward that is not a number: Bloodrush.
+	# The reward that is not a number: Bloodrush. Say what it does, so the screen is never a puzzle.
+	result["surge_effect"] = player.surge.effect_text(float(result["surge_power"]))
 	player.surge.start(float(result["surge_power"]), float(result["surge_seconds"]), String(result["surge_name"]))
 	result["witnesses"] = witness_count
 	result["style"] = st

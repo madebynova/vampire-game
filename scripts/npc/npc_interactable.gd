@@ -26,6 +26,8 @@ func get_prompt(actor: Player) -> String:
 		return "Feed on %s" % who
 	if npc.mode == HumanNpc.Mode.FOLLOWING:
 		return "Talk to %s (send them back to work)" % who
+	if npc.has_news():
+		return "Talk to %s (something to tell)" % who
 	return "Talk to %s" % who
 
 

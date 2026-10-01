@@ -1,5 +1,54 @@
 # Changelog
 
+## Task 1.8 - Vampire world & traversal polish
+
+### Why
+Playtest feedback after Task 1.75: the transformation, Sense, feeding, camera and pad buttons are loved; slipping through a
+window is the best vampire moment; but traversal climbed through floors, went out when you meant in, dropped you from roofs
+into rooms and vaulted you through windows from roofs; movement felt like ice; the cape clipped; "Bright Blood +39 / Blood Fury
+0:32" meant nothing; there was no blood number, no second blood, nothing for people to say and the coffin only slept to dusk.
+This pass fixes the traversal at the root and makes the small world more purposeful. No new category of game was started.
+
+### Fixed
+- **Traversal could fire from the wrong place.** The interactor measured ground distance only, so a roof was "within reach" of the
+  room under it (and the cellar hatch of the roof above it), picked the route end by camera score, and then teleported the player to
+  that end. A route is now offered and started only when the form may use it, the player is on its level, near its start end, on
+  that end's side of the wall, in front of the opening, facing the way it goes, and the landing is free and has floor
+  (`TraversalController.problem`, `TraversalPlacement.entry_problem`). `Interactable.reach_up / reach_down` stop every other prompt
+  leaking through floors too.
+- **The vampire's cape went through its legs when running.** A positive `rotation.x` swings a hanging cape forward; the flare used a
+  positive angle. The cape is now a three-segment chain with lag and a clearance pass (`HumanoidModel`). The feeding "arms forward" pose had
+  the same sign error and threw the arms backward.
+- **Esc closed a menu and opened another in the same frame** (found while building the coffin menu).
+- A teleported player kept the previous prompt for a moment (`Player.place_at` clears the interaction focus).
+
+### Added
+- **Blood number** under the vessel (`N / 100`), smoothed with the liquid.
+- **Readable rewards**: the memory screen names the blood and what it is like, says how much blood you got and, in gold, what the rush does and for how long;
+  the HUD shows the effect under the timer ("Faster, higher jumps, Sense is free, the sun burns slower"). Text is generated from the surge's own numbers.
+- **A second blood: the fox** (`Animal`, `AnimalProfile`, `AnimalPlacement`, `FeedSource`, blood `wild`, feed style `wild`, rush *Instinct*): den, nocturnal
+  routine, skittish, goes to ground after a feed, found by Sense, one creature's-eye memory (first time only), safe but small.
+- **What people tell you** (`Tiding`): twelve tidings across the three people, told in order as trust grows, by time of day, naming strangers to Sense,
+  pointing at secrets and at which feeding state holds a dream. "Talk to X (something to tell)".
+- **Seven more Blood Memories**: a trusting memory for each person, a deepest memory for each (opens once the rest are heard), and the fox's.
+- **Wall climbing, prototype**: hands-and-feet climb pose, dust, mist trail, camera shudder; Sense draws the wall as a pale strip; prompts name the
+  building; a fourth climb (`hut_roof`) and the intentional **broken roof** route (`manor_hatch`); a low rim stops bodies falling into the manor by accident.
+- **Coffin choices** (`RestMenu`, `RestOption`): dusk (default, focused), midnight, dawn, daylight; options too close to now are hidden.
+- **Three small clues** (`InspectPlacement`, `Inspectable`): a watch log, candle wax under a window, a scratched gate lock.
+- Tests: `polish_tests` (Task 1.8, 186 checks, with `-- only=` sections), 54 new unit checks (288 total), `polish_playtest` and `model_probe` dev tools; 840 checks across the five suites.
+
+### Changed
+- **Movement**: separate acceleration / braking / turn grip (`FormData.deceleration`, `turn_grip`, `Player.steer`); Vampire 42 / 70 / 55 (was 26 for
+  everything), Human 30 / 48 / 42 (was 16).
+- Route prompts name the building and the direction ("Slip into the manor through the window"); the climb starts hug the wall.
+- Tomas's trusting memory also reveals the buried key (trust has always been a way to the key).
+- The coffin asks when you wake; every existing reset still happens, and animals are reset too.
+- `Player` collides with a new "player only" layer (the roof rim); sun rays, NPCs and the camera are unaffected.
+
+### Unchanged on purpose
+Sunlight (about three minutes at noon), the 20-minute day and the night, blood drain (Human 0.02/s, Vampire 0.16/s) and Sense cost,
+transformation, feeding feel and camera shake, the pad bindings and vibration.
+
 ## Task 1.75 - Vampire feel & immersion pass
 
 ### Why

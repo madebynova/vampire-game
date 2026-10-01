@@ -165,8 +165,8 @@ func _run() -> void:
 	Input.action_release(&"feed")
 	await _wait(0.4)
 	await _wait_memory()
-	_check(main.memory_view.title_text().begins_with("The Well"), "trust made him CALM blood: %s" % main.memory_view.title_text())
-	_check(world.secrets[&"well_key"].discovered, "calm blood revealed the well key")
+	_check(main.memory_view.title_text() == "Flour on Her Hands", "trust opened the memory only trust opens: %s" % main.memory_view.title_text())
+	_check(world.secrets[&"well_key"].discovered, "...and it revealed the well key too (trust is a way to the key as well)")
 	await _dismiss_memory()
 
 	_set_time(12.0)

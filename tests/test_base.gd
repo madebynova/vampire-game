@@ -71,6 +71,13 @@ func _run_until_focus(target: Vector3, timeout: float, sprint := true) -> float:
 		await get_tree().physics_frame
 		t += get_physics_process_delta_time()
 		if player.interactor.focused != null:
+			# Keep going a moment: the body now stops almost at once (crisp controls), so without this
+			# it would halt right at the edge of interaction range, where the prompt can flicker.
+			var extra := 0.0
+			while extra < 0.12:
+				_face(target)
+				await get_tree().physics_frame
+				extra += get_physics_process_delta_time()
 			break
 	Input.action_release(&"move_forward")
 	Input.action_release(&"sprint")
@@ -126,6 +133,24 @@ func _dismiss_memory(timeout := 30.0) -> void:
 	while t < 3.0 and main.memory_view.is_open():
 		await get_tree().process_frame
 		t += get_process_delta_time()
+
+
+## Press Enter the way a finger does (menus need real input events, not action_press).
+func _press_enter() -> void:
+	await get_tree().process_frame
+	var down := InputEventKey.new()
+	down.physical_keycode = KEY_ENTER
+	down.keycode = KEY_ENTER
+	down.pressed = true
+	Input.parse_input_event(down)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var up := InputEventKey.new()
+	up.physical_keycode = KEY_ENTER
+	up.keycode = KEY_ENTER
+	up.pressed = false
+	Input.parse_input_event(up)
+	await get_tree().process_frame
 
 
 func _become_vampire() -> void:

@@ -150,11 +150,11 @@ func _on_died(_cause: StringName) -> void:
 	player.visual.visible = false
 
 
-func _on_feed_started(npc: HumanNpc) -> void:
+func _on_feed_started(npc: FeedSource) -> void:
 	Fx.burst(player, npc.global_position + Vector3(0, 1.45, 0), Color(0.7, 0.02, 0.05, 1.0), 14, 1.6, 0.05, 0.7, -5.0)
 
 
-func _on_feed_done(_npc: HumanNpc, _result: Dictionary) -> void:
+func _on_feed_done(_npc: FeedSource, _result: Dictionary) -> void:
 	Fx.burst(player, player.global_position + Vector3(0, 1.0, 0), Color(0.8, 0.03, 0.06, 0.8), 30, 2.0, 0.2, 1.0, 0.3)
 	Fx.burst(player, player.global_position + Vector3(0, 0.2, 0), Color(0.9, 0.08, 0.1, 0.9), 40, 3.2, 0.14, 1.4, 1.6)
 

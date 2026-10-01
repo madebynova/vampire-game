@@ -303,6 +303,8 @@ func _run() -> void:
 	await _wait(0.4)
 	_check(_prompt().begins_with("Sleep"), "Coffin prompt: %s" % _prompt())
 	await _tap(&"interact")
+	await _wait(0.3)
+	await _press_enter()   # the coffin now asks when you wake; the first (and focused) answer is the old one: dusk
 	await _wait(6.0)   # the lid slides off, you lie down, it closes, the world fades (was 4.5 s before the coffin animation)
 	_check(player.state.mode == PlayerState.Mode.NORMAL, "control returns after resting")
 	_check(world.elise.mode == HumanNpc.Mode.CALM, "resting resets the world (Elise calm again)")

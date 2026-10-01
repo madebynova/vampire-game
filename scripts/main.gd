@@ -23,6 +23,7 @@ const MEMORY_DELAY := 0.55
 func _ready() -> void:
 	# A fresh game: nothing tasted, no secrets dug up, nothing frozen.
 	HumanNpc.reset_tasted()
+	Inspectable.reset()
 	SecretStash.flags.clear()
 	PauseControl.clear()
 	atmosphere.setup(tod, sun, moon)
@@ -54,9 +55,12 @@ func _bind_presentation() -> void:
 
 
 ## The feed ends with a rush; half a second later the victim's memory takes over the screen.
-func _on_feed_completed(_npc: HumanNpc, result: Dictionary) -> void:
+func _on_feed_completed(_npc: FeedSource, result: Dictionary) -> void:
 	screen_fx.feed_target = 0.0
 	screen_fx.flash(Color(0.7, 0.02, 0.06), 0.75, 2.2)
+	if str(result.get("memory", "")) == "":
+		# A meal, not a memory (a creature already tasted): the rush, the number and the toast say it all.
+		return
 	player.state.set_mode(PlayerState.Mode.MEMORY)   # control stays locked through the pause
 	await get_tree().create_timer(MEMORY_DELAY).timeout
 	if player.state.is_dead() or player.state.mode != PlayerState.Mode.MEMORY:

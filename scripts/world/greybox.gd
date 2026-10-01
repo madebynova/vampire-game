@@ -5,6 +5,8 @@ extends RefCounted
 
 const WORLD := 1
 const SUN_ONLY := 16
+## Blocks the player's body only (a low rim at a roof hole): no sunlight ray, NPC or camera notices it.
+const PLAYER_ONLY := 8
 
 static var _mats: Dictionary = {}
 static var _noise_tex: NoiseTexture2D

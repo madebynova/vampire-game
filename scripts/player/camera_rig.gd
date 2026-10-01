@@ -32,6 +32,8 @@ var _focus := false
 var _focus_point := Vector3.ZERO
 var _focus_distance := 2.3
 var _focus_fov := 56.0
+var _focus_pitch := -0.16
+var _focus_yaw_offset := 0.45
 var _fov_kick := 0.0
 var _fov_kick_decay := 6.0
 var _roll_kick := 0.0
@@ -54,11 +56,13 @@ func snap() -> void:
 	spring.spring_length = default_distance
 
 
-func set_focus(point: Vector3, distance: float, fov: float) -> void:
+func set_focus(point: Vector3, distance: float, fov: float, look_pitch := -0.16, yaw_offset := 0.45) -> void:
 	_focus = true
 	_focus_point = point
 	_focus_distance = distance
 	_focus_fov = fov
+	_focus_pitch = look_pitch
+	_focus_yaw_offset = yaw_offset
 
 
 func clear_focus() -> void:
@@ -96,9 +100,9 @@ func _process(delta: float) -> void:
 
 	if _focus:
 		var to := _focus_point - global_position
-		var want_yaw := atan2(-to.x, -to.z) + 0.45
+		var want_yaw := atan2(-to.x, -to.z) + _focus_yaw_offset
 		yaw = lerp_angle(yaw, want_yaw, 1.0 - exp(-5.0 * delta))
-		pitch = lerpf(pitch, -0.16, 1.0 - exp(-5.0 * delta))
+		pitch = lerpf(pitch, _focus_pitch, 1.0 - exp(-5.0 * delta))
 	elif input_enabled:
 		var look := Input.get_vector(&"look_left", &"look_right", &"look_up", &"look_down")
 		# A gentle response curve: fine aim near the centre, full speed at the edge.

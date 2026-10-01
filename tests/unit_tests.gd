@@ -16,6 +16,10 @@ func _ready() -> void:
 	_test_no_hardcoded_devices()
 	_test_feed_styles_and_content()
 	_test_traversal_math()
+	_test_traversal_rules()
+	_test_steering()
+	_test_cape()
+	_test_content_18()
 	_test_settings_and_audio()
 	_test_feed_style_mod()
 	_test_blood_gauge_polygons()
@@ -217,7 +221,7 @@ func _test_registry() -> void:
 	_check(sense.behavior != null and sense.parameters.has("sense_range"), "ability data carries behavior script + tunables")
 	_check(ContentRegistry.npc(&"tomas") != null and ContentRegistry.npc(&"elise") != null, "core NPCs load")
 	var tomas := ContentRegistry.npc(&"tomas")
-	_check(tomas.memories.size() == 3 and tomas.memory_for(&"asleep").title == "A Dream of Ink", "NPC blood memories are data (asleep variant)")
+	_check(tomas.memories.size() == 5 and tomas.memory_for(&"asleep").title == "A Dream of Ink" and tomas.memory_for(&"trusting").title == "Flour on Her Hands", "NPC blood memories are data (asleep and trusting variants)")
 	_check(tomas.memory_for(&"nonsense") != null, "unknown condition falls back to a memory")
 	_check(not tomas.schedule.is_empty() and tomas.schedule_for(12.0).activity == &"patrol" and tomas.schedule_for(23.0).activity == &"sleep", "NPC schedule is data (noon patrol, 23:00 asleep)")
 	_check(tomas.schedule_for(3.0) != null, "schedule entries wrap past midnight")
@@ -451,7 +455,7 @@ func _test_feed_styles_and_content() -> void:
 	_check(afraid.memory_fragmentation > calm.memory_fragmentation and afraid.memory_tint != calm.memory_tint, "a frightened memory looks different: fragmented, its own colour")
 	_check(ContentRegistry.get_def(&"BloodDefinition", &"iron") != null and ContentRegistry.npc(&"corvin") != null, "the night watchman and his iron blood load from content")
 	var corvin := ContentRegistry.npc(&"corvin")
-	_check(corvin.memories.size() == 3 and corvin.memory_for(&"asleep").title == "The Long Road", "Corvin has calm / asleep / afraid blood memories")
+	_check(corvin.memories.size() == 5 and corvin.memory_for(&"asleep").title == "The Long Road" and corvin.memory_for(&"trusting").title == "The Tenth Lamp", "Corvin has calm / asleep / afraid / trusting / deep blood memories")
 	for p in [ContentRegistry.npc(&"tomas"), ContentRegistry.npc(&"elise"), corvin]:
 		var covered := true
 		var h := 0.0
@@ -574,3 +578,281 @@ func _test_blood_gauge_polygons() -> void:
 		level += 0.01
 	_check(bad.is_empty(), "the liquid outline triangulates at every blood level, wave size and time %s" % str(bad.slice(0, 6)))
 	g.free()
+
+
+# ---------------------------------------------------------------- Task 1.8: traversal rules (pure geometry)
+
+func _stand(p: TraversalPlacement, end: int, back: float) -> Vector3:
+	var dir := p.direction_from(end)
+	var s := p.end_position(end)
+	return Vector3(s.x - dir.x * back, s.y, s.z - dir.y * back)
+
+
+func _facing(p: TraversalPlacement, end: int) -> Array:
+	var d := p.direction_from(end)
+	return [Vector3(d.x, 0, d.y)]
+
+
+func _route(loc: LocationData, id: StringName) -> TraversalPlacement:
+	for p in loc.traversals:
+		if p.id == id:
+			return p
+	return null
+
+
+func _test_traversal_rules() -> void:
+	print("[UNIT] --- traversal rules: only on purpose, only the right way ---")
+	var loc := ContentRegistry.get_def(&"LocationData", &"blackthorn") as LocationData
+	var all_ok := true
+	var bad := []
+	for p in loc.traversals:
+		for end in [0, 1]:
+			var why := p.entry_problem(end, _stand(p, end, 0.6), _facing(p, end))
+			if why != &"":
+				all_ok = false
+				bad.append("%s/%d:%s" % [p.id, end, why])
+	_check(all_ok, "standing just behind either end and facing the way it goes always allows the route %s" % str(bad))
+
+	var window := _route(loc, &"manor_window")
+	var roof := _route(loc, &"manor_roof")
+	var hatch := _route(loc, &"manor_hatch")
+	# Direction: facing away is refused.
+	var behind: Array = [Vector3(0, 0, -window.direction_from(0).y)]
+	_check(window.entry_problem(0, _stand(window, 0, 0.6), behind) == &"facing", "turned away from the window: not offered")
+	# Either the body or the camera facing the right way is enough.
+	_check(window.entry_problem(0, _stand(window, 0, 0.6), behind + _facing(window, 0)) == &"", "...but body OR camera facing it is enough")
+	# Side: standing on the far side of the wall never allows starting from the near end.
+	var inside := Vector3(window.b.x, 0, window.b.z + 0.7)    # just inside, near the wall
+	_check(window.entry_problem(0, inside, _facing(window, 0)) in [&"side", &"far"], "inside the room you cannot start from the OUTSIDE end (%s)" % window.entry_problem(0, inside, _facing(window, 0)))
+	var outside := Vector3(window.a.x, 0, window.a.z - 0.7)
+	_check(window.entry_problem(1, outside, _facing(window, 1)) in [&"side", &"far"], "outside the wall you cannot start from the INSIDE end")
+	var near_wall_in := Vector3(window.a.x, 0, -6.55)
+	_check(window.entry_problem(0, near_wall_in, _facing(window, 0)) == &"side", "right at the sill on the inside, the outside end is on the wrong side of the wall")
+	# Level: a roof is not the yard.
+	_check(window.entry_problem(0, Vector3(window.a.x, 3.9, window.a.z), _facing(window, 0)) == &"level", "up on the roof the window below is on another level")
+	_check(roof.entry_problem(1, Vector3(roof.b.x, 0.0, roof.b.z), _facing(roof, 1)) == &"level", "in the room below the roof's edge you are not at the roof")
+	# Reach and lateral.
+	_check(window.entry_problem(0, Vector3(window.a.x, 0, window.a.z - 4.0), _facing(window, 0)) == &"far", "too far from the window")
+	_check(window.entry_problem(0, Vector3(window.a.x + 1.6, 0, window.a.z - 0.5), _facing(window, 0)) == &"lateral", "well to one side of the window along the wall")
+	# Drops need you to face the edge, whatever the route says (the hatch accepts any facing to climb OUT).
+	_check(hatch.entry_problem(0, _stand(hatch, 0, 0.6), [Vector3(0, 0, 1)]) == &"" and hatch.entry_problem(0, _stand(hatch, 0, 0.6), [Vector3(0, 0, -1)]) == &"", "climbing up through the hole: any way of looking is fine")
+	_check(hatch.entry_problem(1, _stand(hatch, 1, 0.6), [Vector3(0, 0, 1)]) == &"facing", "stepping off the roof into the hole with your back to it: refused")
+	_check(hatch.entry_problem(1, _stand(hatch, 1, 0.6), [Vector3(0, 0, -1)]) == &"", "...facing it: allowed")
+	# No route is ever offered from both of its ends at the same spot.
+	var both := false
+	for p in loc.traversals:
+		for sx in range(-30, 31, 2):
+			for sz in range(-24, 32, 2):
+				for sy in [0.0, 2.6, 2.9, 3.1, 3.9]:
+					var feet := Vector3(sx, sy, sz)
+					for face in [Vector3(1, 0, 0), Vector3(-1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, -1)]:
+						if p.entry_problem(0, feet, [face]) == &"" and p.entry_problem(1, feet, [face]) == &"":
+							both = true
+	_check(not both, "no spot offers a route from both of its ends at once (no 'in or out?')")
+	var ids := {}
+	for p in loc.traversals:
+		ids[p.id] = true
+	_check(ids.size() == loc.traversals.size() and loc.traversals.size() >= 8, "%d routes, each with its own id" % loc.traversals.size())
+
+
+# ---------------------------------------------------------------- Task 1.8: steering (controller movement)
+
+func _old_steer(hv: Vector3, target: Vector3, accel: float, _d: float, _g: float, delta: float) -> Vector3:
+	return hv.move_toward(target, accel * delta)
+
+
+func _simulate_stop(from_speed: float, accel: float, decel: float, grip: float, steer_fn: Callable) -> Dictionary:
+	var hv := Vector3(0, 0, -from_speed)
+	var dist := 0.0
+	var t := 0.0
+	while hv.length() > 0.05 and t < 3.0:
+		hv = steer_fn.call(hv, Vector3.ZERO, accel, decel, grip, 1.0 / 120.0)
+		dist += hv.length() / 120.0
+		t += 1.0 / 120.0
+	return {"time": t, "dist": dist}
+
+
+func _test_steering() -> void:
+	print("[UNIT] --- steering: grip, not ice ---")
+	var vamp := ContentRegistry.form(&"vampire")
+	var human := ContentRegistry.form(&"human")
+	# The previous behaviour (one rate for everything) for comparison: acceleration 26 for a vampire.
+	var before: Dictionary = _simulate_stop(vamp.run_speed, 26.0, 26.0, 0.0, _old_steer)
+	var after: Dictionary = _simulate_stop(vamp.run_speed, vamp.acceleration, vamp.deceleration, vamp.turn_grip, Player.steer)
+	_check(before["dist"] > 1.4, "(the old controller stopped a running vampire in %.2f m / %.2f s)" % [before["dist"], before["time"]])
+	_check(after["dist"] < 0.75 and after["time"] < 0.2, "a running vampire now stops in %.2f m / %.2f s" % [after["dist"], after["time"]])
+	_check(after["dist"] > 0.25, "...not instantly: there is still weight to it (%.2f m)" % after["dist"])
+	var h_stop: Dictionary = _simulate_stop(human.run_speed, human.acceleration, human.deceleration, human.turn_grip, Player.steer)
+	_check(h_stop["dist"] < 0.45 and h_stop["time"] < 0.2, "a running human stops in %.2f m / %.2f s" % [h_stop["dist"], h_stop["time"]])
+	var walk: Dictionary = _simulate_stop(vamp.walk_speed, vamp.acceleration, vamp.deceleration, vamp.turn_grip, Player.steer)
+	_check(walk["dist"] < 0.2, "a walk stops almost on the spot (%.2f m)" % walk["dist"])
+
+	# Getting going is quick but not a teleport.
+	var hv := Vector3.ZERO
+	var t := 0.0
+	var t90 := -1.0
+	while t < 1.0:
+		hv = Player.steer(hv, Vector3(0, 0, -vamp.run_speed), vamp.acceleration, vamp.deceleration, vamp.turn_grip, 1.0 / 120.0)
+		t += 1.0 / 120.0
+		if t90 < 0.0 and hv.length() >= vamp.run_speed * 0.9:
+			t90 = t
+	_check(t90 > 0.1 and t90 < 0.4, "a vampire reaches 90%% of run speed in %.2f s (quick, not instant)" % t90)
+	var one_step := Player.steer(Vector3.ZERO, Vector3(0, 0, -vamp.run_speed), vamp.acceleration, vamp.deceleration, vamp.turn_grip, 1.0 / 120.0)
+	_check(one_step.length() < vamp.run_speed * 0.1, "...a single physics step does not snap to full speed")
+
+	# A hard turn: at full run, ask for sideways. The old direction must die quickly.
+	hv = Vector3(0, 0, -vamp.run_speed)
+	t = 0.0
+	var turn := Vector3(vamp.run_speed, 0, 0)
+	while t < 0.25:
+		hv = Player.steer(hv, turn, vamp.acceleration, vamp.deceleration, vamp.turn_grip, 1.0 / 120.0)
+		t += 1.0 / 120.0
+	_check(absf(hv.z) < 0.6 and hv.x > vamp.run_speed * 0.8, "a 90 degree turn at a run is complete in 0.25 s (old direction %.2f, new %.2f m/s)" % [hv.z, hv.x])
+	var o := Vector3(0, 0, -vamp.run_speed)
+	t = 0.0
+	while t < 0.25:
+		o = _old_steer(o, turn, 26.0, 0.0, 0.0, 1.0 / 120.0)
+		t += 1.0 / 120.0
+	_check(absf(o.z) > 2.0, "(the old controller was still sliding at %.1f m/s along the old line)" % absf(o.z))
+	# Reversing.
+	hv = Vector3(0, 0, -vamp.run_speed)
+	t = 0.0
+	while t < 0.3:
+		hv = Player.steer(hv, Vector3(0, 0, vamp.run_speed), vamp.acceleration, vamp.deceleration, vamp.turn_grip, 1.0 / 120.0)
+		t += 1.0 / 120.0
+	_check(hv.z > vamp.run_speed * 0.7, "reversing at a run takes about a third of a second (%.1f m/s back)" % hv.z)
+	# Easing off the stick slows you down at the braking rate, not the acceleration rate.
+	hv = Vector3(0, 0, -vamp.run_speed)
+	t = 0.0
+	while t < 0.12:
+		hv = Player.steer(hv, Vector3(0, 0, -2.0), vamp.acceleration, vamp.deceleration, vamp.turn_grip, 1.0 / 120.0)
+		t += 1.0 / 120.0
+	_check(hv.length() < 2.6, "easing the stick back from a run slows you in about a tenth of a second (%.1f m/s)" % hv.length())
+	# Analog: half a stick is half a speed and steady.
+	hv = Vector3.ZERO
+	for i in 120:
+		hv = Player.steer(hv, Vector3(0, 0, -vamp.walk_speed * 0.5), vamp.acceleration, vamp.deceleration, vamp.turn_grip, 1.0 / 120.0)
+	_check(_approx(hv.length(), vamp.walk_speed * 0.5, 0.02), "half stick holds half speed (%.2f of %.2f)" % [hv.length(), vamp.walk_speed])
+	# Never exceeds what is asked, never goes NaN, and stays on the ground plane.
+	hv = Vector3(3, 0, 2)
+	var wild := true
+	for i in 240:
+		hv = Player.steer(hv, Vector3(randf_range(-9, 9), 0, randf_range(-9, 9)), 42.0, 70.0, 55.0, 1.0 / 120.0)
+		wild = wild and is_finite(hv.x) and is_finite(hv.z) and hv.y == 0.0 and hv.length() < 20.0
+	_check(wild, "steering stays finite and on the ground plane under random input")
+	_check(vamp.deceleration > vamp.acceleration and human.deceleration > human.acceleration and vamp.turn_grip > 20.0 and human.turn_grip > 20.0, "both forms brake harder than they accelerate (data: %s / %s)" % [vamp.deceleration, human.deceleration])
+
+
+# ---------------------------------------------------------------- Task 1.8: the cape never passes through the body
+
+func _test_cape() -> void:
+	print("[UNIT] --- the cape follows the body ---")
+	var m := HumanoidModel.new()
+	add_child(m)
+	m.apply_look(Color.GRAY, Color(0.1, 0.03, 0.05), Color.DIM_GRAY, Color.BLACK, Color.RED, 4.0, true, true)
+	var worst := 1.0
+	var worst_at := ""
+	var tip_front := false
+	for speed in [0.0, 1.5, 3.0, 4.2, 6.0, 9.0, 12.0]:
+		for airborne in [false, true]:
+			for pose in [0.0, 0.5, 1.0]:
+				m.pose_amount = pose
+				for i in 360:
+					m.animate(speed, not airborne, 1.0 / 60.0)
+					var c := m.cape_clearance()
+					if c < worst:
+						worst = c
+						worst_at = "speed %.1f air %s pose %.1f frame %d" % [speed, airborne, pose, i]
+					if m.cape_tip().x < 0.05:
+						tip_front = true
+	_check(worst >= -0.01, "over every speed, jump and pose the cloth never passes through the legs or torso (worst slack %.3f m at %s)" % [worst, worst_at])
+	_check(not tip_front, "the hem always trails behind the body, never in front of it")
+	m.pose_amount = 0.0
+	for i in 240:
+		m.animate(9.0, true, 1.0 / 60.0)
+	var running_tip := m.cape_tip()
+	for i in 240:
+		m.animate(0.0, true, 1.0 / 60.0)
+	var idle_tip := m.cape_tip()
+	_check(running_tip.x > idle_tip.x + 0.15 and running_tip.y > idle_tip.y, "running streams the cape out behind and lifts it (tip z %.2f y %.2f vs idle z %.2f y %.2f)" % [running_tip.x, running_tip.y, idle_tip.x, idle_tip.y])
+	m.apply_look(Color.GRAY, Color.BLACK, Color.DIM_GRAY, Color.BLACK, Color.BLACK, 0.0, false, false)
+	_check(m.cape_clearance() == 1.0, "as a Human there is no cape to clip")
+	m.queue_free()
+
+
+# ---------------------------------------------------------------- Task 1.8: the new content is valid data
+
+func _test_content_18() -> void:
+	print("[UNIT] --- Task 1.8 content is data, and consistent ---")
+	var loc := ContentRegistry.get_def(&"LocationData", &"blackthorn") as LocationData
+	var npc_ids := {}
+	for p in ContentRegistry.list(&"NpcProfile"):
+		npc_ids[p.id] = p
+	var secret_ids := {}
+	for sp in loc.secrets:
+		secret_ids[sp.secret_id] = true
+	var problems := []
+	var told_total := 0
+	for id in npc_ids:
+		var p: NpcProfile = npc_ids[id]
+		var seen := {}
+		for t in p.tidings:
+			told_total += 1
+			if t.id == &"" or seen.has(t.id):
+				problems.append("%s: tiding id '%s' missing or repeated" % [id, t.id])
+			seen[t.id] = true
+			if t.min_trust < 0 or t.min_trust > 2 or not [&"any", &"day", &"night"].has(t.when):
+				problems.append("%s/%s: bad trust or time" % [id, t.id])
+			if t.introduces != &"" and not npc_ids.has(t.introduces):
+				problems.append("%s/%s introduces unknown person '%s'" % [id, t.id, t.introduces])
+			if t.reveals_secret != &"" and not secret_ids.has(t.reveals_secret):
+				problems.append("%s/%s reveals unknown secret '%s'" % [id, t.id, t.reveals_secret])
+		for t in p.tidings:
+			if t.after != &"" and not seen.has(t.after):
+				problems.append("%s/%s follows unknown tiding '%s'" % [id, t.id, t.after])
+		for m in p.memories:
+			if m.reveals_secret != &"" and not secret_ids.has(m.reveals_secret):
+				problems.append("%s memory '%s' reveals unknown secret" % [id, m.title])
+	_check(problems.is_empty() and told_total >= 12, "all %d tidings are well-formed: trust 0-2, real people, real secrets, real predecessors %s" % [told_total, str(problems)])
+	# Everyone can be introduced to someone, and at least one tiding per person is available without any trust.
+	var open_to_all := true
+	for id in npc_ids:
+		var any_free := false
+		for t in npc_ids[id].tidings:
+			any_free = any_free or t.min_trust == 0
+		open_to_all = open_to_all and any_free
+	_check(open_to_all, "everyone has something to say even to a stranger")
+
+	var animals_ok := not loc.animals.is_empty()
+	for ap in loc.animals:
+		var prof := ContentRegistry.get_def(&"AnimalProfile", ap.animal_id) as AnimalProfile
+		animals_ok = animals_ok and prof != null and prof.blood_definition() != null \
+			and ContentRegistry.get_def(&"FeedStyle", prof.feed_style) != null and not prof.memories.is_empty()
+	_check(animals_ok, "every placed animal has a profile, a blood type, a feed style and a memory")
+	var fox := ContentRegistry.get_def(&"AnimalProfile", &"fox") as AnimalProfile
+	_check(fox.nocturnal and fox.notice_vampire > fox.notice_human * 1.5 and fox.flee_speed > fox.walk_speed * 3.0, "a fox is nocturnal, fears a vampire far more than a human, and bolts much faster than it strolls")
+
+	var profile := ContentRegistry.get_def(&"DayNightProfile", &"default") as DayNightProfile
+	var hours := []
+	for o in profile.rest_options:
+		hours.append(o.hour)
+	_check(profile.rest_options.size() == 4 and profile.rest_options[0].id == &"dusk" and hours == [19.0, 0.0, 5.5, 8.0], "the coffin's choices are data, dusk first: %s" % str(hours))
+	var defaults := RestOption.defaults()
+	var same := defaults.size() == profile.rest_options.size()
+	for i in mini(defaults.size(), profile.rest_options.size()):
+		same = same and defaults[i].id == profile.rest_options[i].id and is_equal_approx(defaults[i].hour, profile.rest_options[i].hour)
+	_check(same, "the built-in fallback matches the shipped choices")
+	var ledger := false
+	for o in profile.rest_options:
+		ledger = ledger or (o.wake_text != "" and o.label != "")
+	_check(ledger, "every choice has a label and a line for waking")
+	_check(loc.inspectables.size() == 3, "the location lists three things worth a look")
+	var clue_ids := {}
+	for ip in loc.inspectables:
+		clue_ids[ip.id] = ip.text.length() > 60 and ip.prompt != ""
+	_check(clue_ids.size() == 3 and not clue_ids.values().has(false), "each clue has a prompt and a line to read")
+	# Forms: the new movement fields are data and sane.
+	var vamp := ContentRegistry.form(&"vampire")
+	var human := ContentRegistry.form(&"human")
+	_check(vamp.deceleration >= vamp.acceleration and human.deceleration >= human.acceleration and vamp.turn_grip > 0.0 and human.turn_grip > 0.0, "both forms define braking and grip")
+	_check(ContentRegistry.get_def(&"FeedStyle", &"wild") != null and ContentRegistry.get_def(&"BloodDefinition", &"wild") != null, "the wild blood and wild feed are registered content")

@@ -57,6 +57,7 @@ var _frame: Label
 var _title: Label
 var _body: Label
 var _facts: VBoxContainer
+var _reward: Label
 var _meta: Label
 var _prompt_row: HBoxContainer
 var _prompt_label: Label
@@ -146,6 +147,11 @@ func _build() -> void:
 	_facts = VBoxContainer.new()
 	_facts.add_theme_constant_override(&"separation", 3)
 	_column.add_child(_facts)
+	# What the blood did for you, in plain words: restored blood, and what the rush gives and for how long.
+	_reward = UiStyle.label("", 19, UiStyle.GOLD, true, 4)
+	_reward.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_reward.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_column.add_child(_reward)
 	_meta = UiStyle.label("", 16, UiStyle.BONE_DIM, false, 3)
 	_meta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -210,7 +216,7 @@ func present(p: Player, feed_result: Dictionary) -> void:
 	_fill_text()
 	_root.visible = true
 	_root.modulate.a = 0.0
-	for n in [_kicker, _frame, _title, _body, _facts, _meta, _prompt_row]:
+	for n in [_kicker, _frame, _title, _body, _facts, _reward, _meta, _prompt_row]:
 		n.modulate.a = 0.0
 	_body.visible_characters = 0
 	_body_base_x = _body.position.x
@@ -281,13 +287,21 @@ func _fill_text() -> void:
 		l.modulate.a = 0.0
 		_facts.add_child(l)
 	var first_time: bool = result.get("first_time", true)
-	var bits := PackedStringArray()
-	bits.append("%s, %s" % [result.get("name", ""), str(result.get("occupation", "")).to_lower()])
-	bits.append("%s blood" % result.get("blood_type", ""))
-	bits.append("+%d blood" % roundi(float(result.get("yield", 0.0))))
+	# Who it came from and what their blood is like (words, no numbers) ...
+	var who := "%s, %s" % [result.get("name", ""), str(result.get("occupation", "")).to_lower()]
+	var note := str(result.get("blood_note", ""))
+	var blood_line := "%s blood." % result.get("blood_type", "")
+	if note != "":
+		blood_line += " %s" % note
+	_meta.text = "%s\n%s%s" % [who, blood_line, "" if first_time else "\na memory you have tasted before"]
+	# ... and, in gold, exactly what it did for you: blood restored, and what the rush gives and for how long.
+	var lines := PackedStringArray()
+	lines.append("+%d blood restored" % roundi(float(result.get("yield", 0.0))))
 	if float(result.get("surge_seconds", 0.0)) > 0.0:
-		bits.append("%s  %d:%02d" % [result.get("surge_name", "Bloodrush"), int(result["surge_seconds"]) / 60, int(result["surge_seconds"]) % 60])
-	_meta.text = "  ·  ".join(bits) + ("" if first_time else "  ·  a memory you have tasted before")
+		var secs := float(result["surge_seconds"])
+		var effect := str(result.get("surge_effect", ""))
+		lines.append("%s  %s%s" % [result.get("surge_name", "Bloodrush"), BloodSurge.clock_text(secs), (": " + effect) if effect != "" else ""])
+	_reward.text = "\n".join(lines)
 	_prompt_label.text = "Continue"
 	_glyph.refresh()
 
@@ -376,7 +390,8 @@ func _complete_text(skipped := true) -> void:
 		tw.tween_property(f, "modulate:a", 1.0, 0.6).set_delay(0.3 + 0.45 * i)
 		i += 1
 	tw.tween_property(_facts, "modulate:a", 1.0, 0.1)
-	tw.tween_property(_meta, "modulate:a", 1.0, 0.8).set_delay(0.4 + 0.45 * i)
+	tw.tween_property(_reward, "modulate:a", 1.0, 0.8).set_delay(0.4 + 0.45 * i)
+	tw.tween_property(_meta, "modulate:a", 1.0, 0.8).set_delay(0.7 + 0.45 * i)
 
 
 ## The memory has a pulse of its own: slow and warm, slower and deeper asleep, sharp and quick in fear.

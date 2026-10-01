@@ -42,6 +42,8 @@ var tree_positions: Array[Vector3] = []
 var walkways: Array[Rect2] = []
 var location: LocationData
 var npcs: Dictionary = {}     ## id -> HumanNpc
+var animals: Array[Animal] = []   ## the wild creatures (foxes), in placement order
+var inspectables: Array[Inspectable] = []   ## small things to read
 var secrets: Dictionary = {}  ## id -> SecretStash
 var tomas: HumanNpc
 var elise: HumanNpc
@@ -68,6 +70,8 @@ func build() -> void:
 	_boundary()
 	_lamps()
 	_actors()
+	_animals()
+	_inspectables()
 	_traversals()
 
 
@@ -159,9 +163,12 @@ func _house() -> void:
 	Greybox.wall(self, Vector2(-2, z0), Vector2(-2, z1), WALL_H, WALL_T, STONE, [
 		{"at": 5.0, "w": 2.0, "y0": 0.0, "y1": 2.6},
 	])
-	# Roof with a collapsed section over the hall.
-	Greybox.slab_with_hole(self, Rect2(x0 - 0.4, z0 - 0.4, 16.8, 10.8), WALL_H + 0.15, 0.3,
-		Rect2(5.5, -15.0, 2.1, 2.2), ROOF)
+	# Roof with a collapsed section over the hall. A low rim of broken stone runs round the hole so nobody
+	# walks (or runs, or is carried) off the roof into the room below by accident: it can be jumped over
+	# on purpose, or used through the "broken roof" route. The rim stops bodies only; sun rays pass it.
+	var hole := Rect2(5.5, -15.0, 2.1, 2.2)
+	Greybox.slab_with_hole(self, Rect2(x0 - 0.4, z0 - 0.4, 16.8, 10.8), WALL_H + 0.15, 0.3, hole, ROOF)
+	_roof_hole_rim(hole, WALL_H + 0.3)
 
 	# Hall furniture.
 	Greybox.box(self, Vector3(2.0, 0.42, -10.6), Vector3(3.6, 0.1, 1.1), DARK_WOOD, Greybox.WORLD, "Table")
@@ -186,6 +193,20 @@ func _house() -> void:
 	coffin = COFFIN_SCENE.instantiate() as Coffin
 	coffin.position = location.coffin_position
 	add_child(coffin)
+
+
+## Four low stone lips standing on the roof around `hole` (XZ), `top` being the roof surface height.
+func _roof_hole_rim(hole: Rect2, top: float) -> void:
+	var h := 0.45
+	var t := 0.18
+	var y := top + h * 0.5
+	var cx := hole.position.x + hole.size.x * 0.5
+	var cz := hole.position.y + hole.size.y * 0.5
+	var w := hole.size.x + t * 2.0
+	for sz in [-1.0, 1.0]:
+		Greybox.box(self, Vector3(cx, y, cz + sz * (hole.size.y * 0.5 + t * 0.5)), Vector3(w, h, t), DARK_STONE, Greybox.PLAYER_ONLY, "RoofRim")
+	for sx in [-1.0, 1.0]:
+		Greybox.box(self, Vector3(cx + sx * (hole.size.x * 0.5 + t * 0.5), y, cz), Vector3(t, h, hole.size.y), DARK_STONE, Greybox.PLAYER_ONLY, "RoofRim")
 
 
 func _omni(pos: Vector3, color: Color, energy: float, rng: float) -> void:
@@ -395,6 +416,61 @@ func _actors() -> void:
 		add_child(st)
 		secrets[sp.secret_id] = st
 	stash = secrets.get(&"well_key")
+
+
+## The small things worth a look the location lists (see InspectPlacement).
+func _inspectables() -> void:
+	for p in location.inspectables:
+		var it := Inspectable.new()
+		it.placement = p
+		it.position = p.position
+		add_child(it)
+		inspectables.append(it)
+
+
+## The wild creatures the location lists, each at a den: a low mound of earth with a dark mouth, where the
+## animal sleeps by day and goes to ground when it is frightened.
+func _animals() -> void:
+	var dens: Dictionary = {}
+	for p in location.animals:
+		var profile := ContentRegistry.get_def(&"AnimalProfile", p.animal_id) as AnimalProfile
+		if profile == null:
+			push_warning("Location '%s' references unknown animal '%s'" % [location.id, p.animal_id])
+			continue
+		var den: Vector3 = p.den_position if p.den_position != Vector3.ZERO else p.position
+		var key := "%.1f/%.1f" % [den.x, den.z]
+		if not dens.has(key):
+			dens[key] = true
+			_den(den)
+		var a := Animal.new()
+		a.profile = profile
+		a.den = den
+		a.position = p.position
+		a.rotation.y = deg_to_rad(p.yaw_degrees)
+		add_child(a)
+		animals.append(a)
+
+
+## A fox den: a half-buried mound and a dark opening (visual only: nothing to bump into).
+func _den(pos: Vector3) -> void:
+	var mound := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 1.0
+	sm.height = 2.0
+	mound.mesh = sm
+	mound.material_override = Greybox.material(DIRT.darkened(0.25))
+	mound.scale = Vector3(1.3, 0.28, 1.1)
+	mound.position = pos + Vector3(0, 0.02, 0)
+	mound.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mound)
+	var mouth := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.5, 0.26, 0.05)
+	mouth.mesh = bm
+	mouth.material_override = Greybox.material(Color(0.03, 0.02, 0.02))
+	mouth.position = pos + Vector3(0.0, 0.14, 0.78)
+	mouth.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mouth)
 
 
 func _spawn_npc(profile: NpcProfile, pos: Vector3, yaw_degrees: float) -> HumanNpc:

@@ -14,6 +14,8 @@ extends ContentDef
 @export var fog_density: PackedFloat32Array = PackedFloat32Array()
 @export var moon_energy: PackedFloat32Array = PackedFloat32Array()
 @export var star_strength: PackedFloat32Array = PackedFloat32Array()
+## The wake-up times the coffin offers (see RestOption). Empty = the built-in four: dusk, midnight, dawn, daylight.
+@export var rest_options: Array[RestOption] = []
 
 
 func sample(hour: float) -> Dictionary:

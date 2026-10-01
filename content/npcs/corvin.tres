@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="NpcProfile" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="NpcProfile" load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/npc_profile.gd" id="1_prof"]
 [ext_resource type="Script" path="res://scripts/data/blood_memory.gd" id="2_mem"]
 [ext_resource type="Script" path="res://scripts/data/schedule_entry.gd" id="3_sch"]
+[ext_resource type="Script" path="res://scripts/data/tiding.gd" id="4_tid"]
 
 [sub_resource type="Resource" id="mem_calm"]
 script = ExtResource("2_mem")
@@ -24,6 +25,47 @@ condition = &"afraid"
 title = "Snuffed"
 text = "Boots. Your own, running. The lamps go out one by one behind you, as if someone were walking the round the other way, pinching each wick in turn.\n\nYou reach the gate. It is locked from the outside."
 facts = PackedStringArray("Corvin is afraid of the lamps going out.", "He believes something walks the round behind him.", "The estate gate is locked from the outside.")
+
+[sub_resource type="Resource" id="mem_trusting"]
+script = ExtResource("2_mem")
+condition = &"trusting"
+title = "The Tenth Lamp"
+text = "A man who has been kind to you says, 'It is only nine lamps, Corvin. You are tired.' You smile and nod. You do not tell him about the tenth, beyond the gate: no post, no oil, a small flame that has never once flickered in the wind.\n\nYou count to nine again, aloud. Someone has to."
+facts = PackedStringArray("Corvin sees a tenth lamp beyond the gate that nobody lit.", "He counts to nine aloud so that he does not count ten.")
+
+[sub_resource type="Resource" id="td_gate"]
+script = ExtResource("4_tid")
+id = &"gate"
+text = "The gate's locked from the outside and has been since the rains. Nobody in, nobody out. Whoever turned that key didn't come by the road."
+learned = "The estate gate is locked from the outside."
+
+[sub_resource type="Resource" id="td_roof"]
+script = ExtResource("4_tid")
+id = &"roof"
+text = "Best view of the whole road is from the hut roof. I used to climb up by the north wall before my knees went. You can see from the gate to the manor door."
+learned = "The watch hut's roof overlooks the whole road, from the gate to the manor."
+
+[sub_resource type="Resource" id="td_elise"]
+script = ExtResource("4_tid")
+id = &"elise"
+text = "The girl in the gatehouse keeps a light burning. Good. A lit window is a reason for the dark to keep its distance."
+learned = "Elise keeps a light burning at the gatehouse."
+min_trust = 1
+introduces = &"elise"
+
+[sub_resource type="Resource" id="td_tenth"]
+script = ExtResource("4_tid")
+id = &"tenth"
+text = "I'll tell you because you stayed to talk. There's a tenth lamp, far down the road beyond the gate, where there's no post and no oil. It burns anyway, and I've never once seen who lit it."
+learned = "A tenth lamp burns beyond the gate that nobody lit. Corvin dreams of a child on that road: a dream waits in his sleeping blood."
+min_trust = 2
+
+[sub_resource type="Resource" id="mem_deep"]
+script = ExtResource("2_mem")
+condition = &"deep"
+title = "Who Lit the Tenth"
+text = "You follow the tenth lamp down the road beyond the gate, and the road is longer than it should be. The one holding the lamp is a child, and the child is holding it for you, so that you will not lose the way back.\n\nYou understand, now, that you have walked this road in your sleep for four nights. You understand that the gate was never locked from the outside. It was locked from within, by a hand that wanted to keep something in."
+facts = PackedStringArray("Corvin has been sleepwalking the road beyond the gate.", "Something was locked in, not out.")
 
 [sub_resource type="Resource" id="sch_sleep"]
 script = ExtResource("3_sch")
@@ -69,8 +111,9 @@ greeting_lines = PackedStringArray("Lamps are lit, so mind the road. I walk it t
 familiar_lines = PackedStringArray("You again. I sleep by the gate in the daytime, and the less that is said about that the better.")
 trust_lines = PackedStringArray()
 night_lines = PackedStringArray("Halt. Who walks? ...Ah. Forgive me. The dark has me jumping at lamp-posts.", "Nine lamps. Count them with me, if you can't sleep. It helps.")
+tidings = Array[ExtResource("4_tid")]([SubResource("td_gate"), SubResource("td_roof"), SubResource("td_elise"), SubResource("td_tenth")])
 blood_type = &"iron"
 blood_description = "Cold iron and lamp-smoke. Vigilance has a taste."
 blood_yield = 40.0
-memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid")])
+memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid"), SubResource("mem_trusting"), SubResource("mem_deep")])
 schedule = Array[ExtResource("3_sch")]([SubResource("sch_sleep"), SubResource("sch_idle"), SubResource("sch_patrol")])

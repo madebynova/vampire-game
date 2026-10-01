@@ -540,7 +540,7 @@ func _test_feeding_asleep_and_trusting() -> void:
 	await _wait(3.6)
 	Input.action_release(&"feed")
 	await _wait_memory(3.0)
-	_check(main.memory_view.title_text().begins_with("The Well"), "trust gives the calm memory: %s" % main.memory_view.title_text())
+	_check(main.memory_view.title_text() == "Flour on Her Hands", "trust gives the memory only trust opens: %s" % main.memory_view.title_text())
 	await _dismiss_memory()
 	_reset_world()
 
@@ -728,7 +728,7 @@ func _use_route(id: StringName, end: int) -> Dictionary:
 	var dir := dest - start
 	dir.y = 0.0
 	dir = dir.normalized()
-	var stand := start - dir * 0.6
+	var stand := start - dir * (0.2 if start.y > 0.5 else 0.6)    # just behind the end (a wall top is only 0.6 m thick)
 	stand.y = start.y + 0.05
 	_place(stand, rad_to_deg(atan2(-dir.x, -dir.z)))
 	await _wait(0.45)
@@ -751,13 +751,13 @@ func _test_traversal() -> void:
 	var window := _link(&"manor_window")
 	_check(window != null and world.traversal_links.size() >= 6, "the world has %d designated routes" % world.traversal_links.size())
 	var r: Dictionary = await _use_route(&"manor_window", 0)
-	_check(r["prompt"] == "Slip through the window" and r["action"] == &"interact", "the vampire is offered the window: %s" % r["prompt"])
+	_check(r["prompt"] == "Slip into the manor through the window" and r["action"] == &"interact", "the vampire is offered the window: %s" % r["prompt"])
 	_check(r["mid_mode"] == PlayerState.Mode.TRAVERSING, "it takes over the body for a moment")
 	_check(r["ok"], "and puts the vampire clear on the other side (%s)" % str(r["pos"].snapped(Vector3(0.1, 0.1, 0.1))))
 	_check(player.visual.visible and player.traversal.traversals_done == 1, "the body re-forms; one traversal done")
 	await _shot("t01_inside_window")
 	r = await _use_route(&"manor_window", 1)
-	_check(r["prompt"] == "Slip out through the window" and r["ok"], "it works both ways: %s" % r["prompt"])
+	_check(r["prompt"] == "Slip out of the manor through the window" and r["ok"], "it works both ways: %s" % r["prompt"])
 
 	# A Human: the route does not exist.
 	player.form.set_form_immediate(&"human")
@@ -777,7 +777,7 @@ func _test_traversal() -> void:
 	await _wait(0.4)
 	_check(_prompt() == "none" or not _prompt().contains("window"), "far from a route there is no prompt")
 	_check(not player.traversal.start(window, 0), "start() refuses when you are not at the route")
-	_place(Vector3(6.2, 0, -4.0), 180.0)
+	_place(Vector3(6.2, 0, -4.0), 0.0)     # facing the window (north)
 	await _wait(0.4)
 	player.state.set_mode(PlayerState.Mode.TRANSFORMING)
 	_check(not player.traversal.can_use(window), "it cannot begin in the middle of a transformation")
@@ -809,7 +809,7 @@ func _test_traversal() -> void:
 	_reset_world()
 	player.form.set_form_immediate(&"vampire")
 	r = await _use_route(&"manor_roof", 0)
-	_check(r["prompt"] == "Climb to the manor roof" and r["ok"], "the vampire climbs to the manor roof: %s" % r["prompt"])
+	_check(r["prompt"] == "Scale the manor wall to the roof" and r["ok"], "the vampire climbs to the manor roof: %s" % r["prompt"])
 	await _wait(0.8)
 	_check(player.global_position.y > 3.7 and player.is_on_floor(), "and stands on it (y %.2f)" % player.global_position.y)
 	Input.action_press(&"move_forward")
@@ -819,7 +819,7 @@ func _test_traversal() -> void:
 	_check(player.global_position.y > 3.6, "the roof holds a walking vampire (no falling through)")
 	await _shot("t02_on_the_roof")
 	r = await _use_route(&"manor_roof", 1)
-	_check(r["prompt"] == "Drop down to the yard" and r["ok"] and player.global_position.y < 0.3, "the drop lands in the yard")
+	_check(r["prompt"] == "Drop from the manor roof to the yard" and r["ok"] and player.global_position.y < 0.3, "the drop lands in the yard")
 
 	# Blocked exit: nothing may leave the player inside an object.
 	_reset_world()
@@ -838,7 +838,7 @@ func _test_traversal() -> void:
 	await get_tree().physics_frame
 	r = await _use_route(&"manor_window", 0)
 	_check(player.traversal.is_clear(player.global_position) and player.state.mode == PlayerState.Mode.NORMAL, "with the exit blocked the player is NOT left inside it (%s)" % str(player.global_position.snapped(Vector3(0.1, 0.1, 0.1))))
-	_check(blocked_count.size() == 1 and player.global_position.distance_to(Vector3(6.2, 0, -4.6)) < 1.0, "it returns to where it started and says so")
+	_check(blocked_count.is_empty() and r["prompt"] == "none" and player.global_position.distance_to(Vector3(6.2, 0, -4.0)) < 0.7, "the blocked route is not offered, so nothing starts and you stay where you were (see polish_tests for a route that fills up mid-way)")
 	block.queue_free()
 
 	# Discoverable by Sense.
@@ -1072,9 +1072,12 @@ func _test_hud() -> void:
 		var txt: String = (l as Label).text
 		if l == hud._gain_label:
 			continue   # the brief "+N" that floats up while feeding
+		if l == hud._toast_label or l == hud._surge_detail:
+			continue   # the reward line spells out its percentages on purpose (a Bloodrush is explained, not hinted)
 		if txt.contains("%") or txt.is_valid_int():
 			numeric.append(txt)
-	_check(numeric.is_empty(), "blood is a living vessel, not a number or a percentage %s" % str(numeric))
+	_check(numeric.is_empty(), "no stray numeric labels: blood is a living vessel with its number drawn under it, not a bar of percentages %s" % str(numeric))
+	_check(hud._gauge.number_text() == "%d / 100" % hud._gauge.displayed_amount(), "the vessel carries its own number: %s" % hud._gauge.number_text())
 	_set_blood(18.0)
 	await _wait(0.4)
 	_check(hud._status_label.text == "HUNGRY" and hud._gauge._hungry, "low blood says HUNGRY in words (and a dashed ring), not only a colour")
@@ -1136,6 +1139,9 @@ func _test_coffin() -> void:
 	_check(_prompt().begins_with("Sleep"), "approach: %s" % _prompt())
 	var lid0 := world.coffin.lid_open
 	await _tap(&"interact")
+	await _wait(0.3)
+	_check(world.coffin._menu.is_open(), "the coffin asks when you will wake")
+	await _press_key(KEY_ENTER)    # the first (focused) answer is the old one: until dusk
 	var max_lid := 0.0
 	var lay := 0.0
 	var t := 0.0

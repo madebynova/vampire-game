@@ -28,14 +28,16 @@ user://mods/<mod>/mod.cfg  optional manifest  (name, version, author, descriptio
 |---|---|---|---|
 | Forms | `FormData` | `content/forms/` | speed, jump, look, sun vulnerability + heat multiplier, whether humans fear it, which abilities it may use, night vision floor, blood drain / regen, **whether hunger slows it, its resting heartbeat, and which traversal types it may use** |
 | Abilities | `AbilityDefinition` | `content/abilities/` | id, input action + default key **and pad button**, toggle, blood cost per second **and up-front activation cost**, **the behavior script**, tunable parameters |
-| People | `NpcProfile` | `content/npcs/` | look, personality (notice radius, sleep depth, follow), dialogue by trust/night, blood type + description, **blood memories**, **daily schedule** |
-| Blood memories | `BloodMemory` (inside an NPC) | - | what blood tells you, chosen by the victim's state: `calm`, `asleep`, `afraid`, `any`; may reveal a secret |
+| People | `NpcProfile` | `content/npcs/` | look, personality (notice radius, sleep depth, follow), dialogue by trust/night, blood type + description, **blood memories**, **daily schedule**, **what they can tell you** (`Tiding`s) |
+| Things people tell you | `Tiding` (inside an NPC) | - | one useful thing, in order of trust and time of day: the words, the plain takeaway ("Learned: ..."), who it introduces (so Sense names them), what hidden thing it reveals |
+| Animals | `AnimalProfile` + `AnimalPlacement` | `content/animals/` | a wild creature that can be fed on: look, how skittish, when it is about, den and roam range, blood type, yield, feed style, and its one memory |
+| Blood memories | `BloodMemory` (inside an NPC or animal) | - | what blood tells you, chosen by the victim's state: `calm`, `asleep`, `afraid`, `trusting`, `any`, or `deep` (opens once every other memory has been heard); may reveal a secret |
 | Schedules | `ScheduleEntry` (inside an NPC) | - | hour range, `patrol`/`idle`/`sleep`, route points, bed height, lantern |
-| Blood types | `BloodDefinition` | `content/blood/` | Sense colour, feed-yield multiplier, **Bloodrush duration / power multipliers** (effects field reserved) |
+| Blood types | `BloodDefinition` | `content/blood/` (people: common, aged, bright, iron; animals: `wild`) | Sense colour, feed-yield multiplier, **Bloodrush duration / power multipliers** (effects field reserved) |
 | Feeding styles | `FeedStyle` | `content/feeding/` | **how a feed plays for one victim state** (`calm`, `asleep`, `afraid`, `trusting`, or a new id): yield, Bloodrush power and length, how far the scream carries, how far sight matters, camera shake, feed volume, vibration, taste note, the Sense hint, and the Blood Memory's tint / fragmentation / sound bed / pace / framing line |
 | Sunlight | `SunlightProfile` | `content/sunlight/` | the whole survival curve: stage names, heat thresholds, damage per second, slowdown, cooldown |
-| Sky / time | `DayNightProfile` | `content/time/` | sky, fog, ambient, sun colour, moon and star strength by hour |
-| Locations | `LocationData` + `NpcPlacement` + `SecretPlacement` + `TraversalPlacement` | `content/locations/` | who lives where, hidden secrets and the flags they set, lamp positions, coffin position, **designated routes (windows to slip through, walls / roofs to climb) and their prompts** |
+| Sky / time | `DayNightProfile` (+ `RestOption`) | `content/time/` | sky, fog, ambient, sun colour, moon and star strength by hour; **the wake-up times the coffin offers** |
+| Locations | `LocationData` + `NpcPlacement` + `SecretPlacement` + `TraversalPlacement` + `AnimalPlacement` + `InspectPlacement` | `content/locations/` | who lives where, hidden secrets and the flags they set, lamp positions, coffin position, **designated routes (windows, walls, roofs) with their prompts and rules** (`reach`, `level_tolerance`, `lateral_tolerance`, `facing_min`, `barrier`, `lip_height`, `show_wall`), **which animals live where and where they den**, **small things to read** |
 | Sounds | `SoundDefinition` | `content/sounds/` | replaces a named sound with any `AudioStream`: the originals (`heartbeat`, `bite`, `sense_ping`...) **and the Task 1.75 ones** (`transform_vampire`, `transform_human`, `sense_on`, `feed_rush`, `heartbeat_deep`, `heartbeat_sharp`, `memory_calm`, `memory_asleep`, `memory_afraid`, `traverse_window`, `traverse_climb`, `ui_*`...) |
 
 All of these extend `ContentDef` (`id`, `display_name`, `description`). The registry keys them
@@ -62,7 +64,19 @@ by their class name and `id`.
 - **Reacting to vampiric acts** - `HumanNpc.perceive_vampiric_act(origin, strength, radius, needs_sight)` is the one
   door by which anything supernatural (a feeding, a climb) frightens people; `FeedStyle` supplies the numbers.
 - **Traversal** - add a `TraversalPlacement` to a location and list the type in `FormData.traversal`; the
-  prompt, both ends, the Sense presence and the movement are generic (`TraversalLink`, `TraversalController`).
+  prompt, both ends, the Sense presence and the movement are generic (`TraversalLink`, `TraversalController`). A route is
+  offered only when `TraversalPlacement.entry_problem()` says the player is on the right level, close enough, on the right
+  side of the wall (`barrier`), in front of the opening and facing it, and the landing is free (the controller adds that last
+  check); give a route sensible `reach` / `barrier` values and it can never be started from the wrong side. An end may be
+  on a roof; stepping off a roof always needs the player to face the edge.
+- **Things to drink from** - extend `FeedSource` (`can_be_fed`, `begin_feed`, `feed_tick`, `finish_feed`, `interrupt_feed`,
+  `feed_style`, `get_feed_result`, optional camera / crouch hints). `FeedingController`, the HUD and the memory view only know that
+  interface; people (`HumanNpc`) and animals (`Animal`) are two implementations. An empty `"memory"` in the result means "a
+  meal, not a memory". The blood itself is a `BloodDefinition`, how the feed plays a `FeedStyle`.
+- **Things people tell you** - add `Tiding`s to an `NpcProfile`; they are told one at a time as trust grows (`min_trust`), by
+  time of day (`when`), after another (`after`). A tiding can `introduces` another person (Sense then uses their name) or
+  `reveals_secret` (a hidden thing, exactly as a Blood Memory does).
+- **Coffin choices** - list `RestOption`s on a `DayNightProfile`; the menu, the wake-up hour and the line shown on waking follow.
 - **Input** - gameplay reads named actions only. A new ability's `default_key` / `default_joy_button` are registered
   for you; prompts (`InputGlyph`) show whatever the action is bound to for the device in use.
 
@@ -128,6 +142,8 @@ maths, schedules, memories and ability construction from data.
 - **New abilities from a mod, in practice.** An `AbilityDefinition` can point at any script, but a
   mod-shipped script has to be loadable from `user://` and there is no API stability, docs for the
   `Ability` hooks beyond the source, or UI to show extra abilities.
+- **Animal behaviour beyond a den, a wander and a flee.** An `AnimalProfile` tunes how skittish, when it is about and what its
+  blood is like; a new *kind* of behaviour (a predator, a flock) is code.
 - **Items, enemies, quests, dialogue trees, encounters, VFX definitions** - none of these systems
   exist yet, so there is nothing to mod. (Sounds and feeding styles are moddable; screen effects, particles and
   the transformation presentation are code.)

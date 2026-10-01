@@ -22,7 +22,7 @@ const GROUPS := [
 		["Feed (hold)", "vampire", [&"feed"], [&"feed"]],
 	]],
 	["THE WORLD", [
-		["Talk, dig, sleep", "", [&"interact"], [&"interact"]],
+		["Talk, read, dig, sleep", "", [&"interact"], [&"interact"]],
 		["Windows, climbing", "vampire", [&"interact"], [&"interact"]],
 		["Continue a memory", "", [&"memory_dismiss"], [&"memory_dismiss"]],
 	]],

@@ -1,4 +1,4 @@
-# Vampire prototype - design notes (Task 1 + Task 1.5 + Task 1.75)
+# Vampire prototype - design notes (Task 1 + Task 1.5 + Task 1.75 + Task 1.8)
 
 North-star question: **"Is being this vampire actually fun - does it feel like you became one?"** Task 1
 proved the systems work. Task 1.5 tried to make them create *decisions*. Task 1.75 is about **feel**: the
@@ -9,16 +9,193 @@ See the README. Quick reference (replace `godot` with the 4.8 binary):
 
 | Command | What |
 |---|---|
-| `godot --headless --path . res://tests/unit_tests.tscn` | 234 logic checks (clock, blood tuning, input map, content, traversal paths, settings) |
+| `godot --headless --path . res://tests/unit_tests.tscn` | 288 logic checks (clock, blood tuning, input map, content, traversal paths **and rules**, steering, the cape, new content, settings) |
 | `godot --headless --path . res://tests/smoke_test.tscn` | 72-check Task 1 playthrough |
 | `godot --headless --path . res://tests/scenario_tests.tscn` | 52-check Task 1.5 scenarios |
-| `godot --headless --path . res://tests/feel_tests.tscn` | 238-check Task 1.75 feel suite (real key / pad / held-button input) |
+| `godot --headless --path . res://tests/feel_tests.tscn` | 242-check Task 1.75 feel suite (real key / pad / held-button input) |
+| `godot --headless --path . res://tests/polish_tests.tscn` | 186-check Task 1.8 suite (traversal rules, blood number and rewards, movement, cape, fox, tidings, coffin, memories and clues; `-- only=...`) |
+| `godot --path . res://tests/polish_playtest.tscn -- <dir>` | scripted windowed walk through the Task 1.8 features with ~30 screenshots (`only=fox,...`) |
+| `godot --path . res://tests/model_probe.tscn -- <dir>` | the vampire model posed (idle, walk, run, jump, transformation, climb, feed) from the side and behind |
 | `godot --path . res://tests/playtest_driver.tscn -- <dir>` | scripted walk through the playtest sequence with screenshots |
 | `godot --path . res://tests/world_probe.tscn -- <dir> day|night|routes|title` | layout views |
 | `godot --headless --path . res://tests/soak_probe.tscn` | fast-forward soak: wanders, transforms, senses, feeds for ~5 minutes at 8x |
 | `godot --headless --path . res://tests/sun_map.tscn -- 12` | ASCII shade map at 12:00 (hour arg optional) |
 | `godot --path . res://tests/time_probe.tscn -- <dir> 6,12,18,22` | screenshots of the yard by hour, Human vs Vampire |
 | `godot --path . res://tests/perf_probe.tscn` | frame time / draw calls in day, dusk, night, Sense on |
+
+## Task 1.8 - vampire world & traversal polish
+
+The Task 1.75 playtest said: the transformation, Sense, feeding, the camera and the pad buttons are loved; the strongest
+vampire moments are slipping through a window "as a bat" and becoming a vampire; the people exist only to be Sensed; the
+village looks nice but there is little to *do*; traversal is great **except** that it climbs through floors, sends you
+out of a window when you meant in, drops you into rooms from roofs and vaults you through windows from roofs; movement is
+like ice; the cape clips; the Bloodrush readout ("Bright Blood +39", "Blood Fury 0:32") means nothing; there should be a
+number on the blood; there should be another thing to drink besides people; the coffin only sleeps to dusk. The player
+now asks "what can I do as a vampire?" instead of "why is this boring?". This pass makes the existing small world
+reliable and purposeful. It adds no system bigger than the foxes.
+
+### Baseline (recorded before any change)
+Godot 4.8-dev6. `unit_tests` 234/234, `smoke_test` 72/72, `scenario_tests` 52/52, `feel_tests` 238/238 - 596 checks, all
+passing, only the known harmless "ObjectDB instances leaked at exit" message.
+
+### Feedback -> response
+| Playtest feedback | Response |
+|---|---|
+| Traversal climbs through floors, goes OUT when you meant IN, drops from roofs into interiors, vaults through windows from roofs, the hatch does the same | Root cause found in code: `Interactor` measured **ground-plane distance only** (a roof was "within reach" of the room under it, and the reverse), picked the end by *camera-forward score* so standing between the two ends of a window could choose the far one, and `TraversalController.start()` then **teleported the player to the chosen end**. Fixed at the root: see *Traversal rules* below. |
+| Movement is like ice | Separate acceleration / **braking** / **turn grip** (`Player.steer`). A running vampire stopped in ~1.5 m; now ~0.55 m in 0.13 s. |
+| Cape clips through the player while running | Found in code: positive `rotation.x` swings a hanging cape **forward**, so `_cloak.rotation.x = +flare` drove the hem through the legs. Rebuilt as a 3-segment chain with lag and a leg-clearance pass; no cloth simulation. |
+| "Bright Blood +39 / Blood Fury 0:32" is unreadable | The memory screen now says what the blood **is** ("Bright blood. Young, quick and heady."), how much it gave ("+39 blood restored") and, in gold, what the rush **does** and for how long ("Fury 0:32: +22% speed, +14% jump, Sense is free, sun burns 20% slower"). The HUD shows the same under the timer. Generated from the real tuning numbers. |
+| Wants a number in the blood HUD | `73 / 100` under the vessel (smoothed with the liquid, so it counts up as you drink). The vessel is untouched. |
+| Wants more ways to get blood | A **fox** (`Animal`, data: `AnimalProfile`, blood `wild`, feed style `wild`). Two foxes live under the old wall: asleep in the den by day, out at night, skittish, bolting from a vampire (much more than a human), going to ground for a while after a feed. Sense finds them. |
+| NPCs "kinda just there so you can sense them" | Each person has **tidings** (`Tiding` data): the next thing they will tell you as you earn trust, gated by time of day. They can name a stranger (Sense then calls them by name), point at a hidden thing, or hint at which feeding state holds a memory. No quest log. |
+| Wants more Blood Memories | +7: a **trusting** memory for each person, a **deepest** memory for each (opens once the other four are heard, whatever state they are in), and the fox's. Fifteen among the people (was nine). |
+| Wants to climb a wall to a roof | The climb routes existed but did not read as supernatural. They now have a hands-and-feet climb pose, stone dust, a mist trail off the cloak, a light camera shudder, and **Sense draws the wall** as a pale strip with a label ("Climb: manor wall"). Prompts name the building. A fourth (`hut_roof`) and a deliberate **broken-roof** route (`manor_hatch`) were added. |
+| Coffin only sleeps to dusk | The coffin now asks **when you will wake** (data: `RestOption`): until dusk (first, selected - the old behaviour), midnight, dawn, **daylight** (8 AM: wake as a Human into the day, to talk to people). |
+| World needs more immersion | Not a bigger map: foxes at night, tidings that connect people and places, three small readable clues (a log, wax under a window, a scratched gate lock) that agree with what people say, more routes, more memories. |
+
+### Traversal rules (the main fix)
+Nothing is ever started by proximity. `TraversalController.problem(link, end)` is the single decision; it returns a reason
+code and the route is **not offered** (no prompt) and `start()` **refuses** unless it is `""`:
+1. the form may use that kind of route (Human: none);
+2. the player is `can_act` and not already traversing (and 0.45 s after the last one);
+3. **level** - the player's feet are within 1.1 m of the *start end's* height (`level`);
+4. **reach** - within 2.0 m on the ground plane of the start end (`far`);
+5. **side** - not already past the wall: the player's position along the route is before the wall (`barrier`, a fraction of the
+   run; 0.5 for a window). Standing inside by the sill you can *never* start from the outside end, and vice versa (`side`);
+6. **lateral** - roughly in front of the opening, not 1.5 m along the wall (`lateral`);
+7. **facing** - body *or* camera within ~75 degrees of the way the route goes (`facing`). You arrive facing *into* the room, so a
+   second press cannot send you back out; to leave you must turn to the window. **Stepping off a roof** always needs you
+   to face the edge, whatever the route says;
+8. **landing** - the exit spot (or the first nearby spot that fits) is free *and has floor* (`blocked`).
+The first six live on `TraversalPlacement.entry_problem()` (pure geometry, data per route: `reach`, `level_tolerance`,
+`lateral_tolerance`, `facing_min`, `barrier`), so tests and mods can use it without a player. `Interactable` gained
+`reach_up` / `reach_down` and the `Interactor` skips anything on another level (this alone also stops the cellar hatch being
+used from the roof and every NPC/secret/coffin prompt leaking through floors). The path eases from where the player
+stood onto the route's line instead of snapping. The collapsed section of the manor roof has a low stone rim (blocks the
+body only; sunlight is untouched), so nobody falls into the hall by accident; the `manor_hatch` route is the intentional way.
+`Player.place_at` clears the interaction focus (a stale prompt used to survive a teleport).
+
+### The fox, and what makes it a different kind of blood
+`FeedSource` is a small interface (`can_be_fed`, `begin_feed`, `feed_tick`, `finish_feed`, `interrupt_feed`, `feed_style`,
+`get_feed_result`, plus camera / crouch hints). `HumanNpc` and `Animal` both implement it; `FeedingController`, the HUD and the
+memory view needed no special case. What differs is data:
+| | Person | Fox |
+|---|---|---|
+| Blood (calm) | 35-52 (by blood type) | 26 |
+| Bloodrush | Clear Blood 1.0 x 50 s (Fury 1.35 x 32 s afraid, Dreamblood 0.8 x 75 s asleep) | Instinct 0.7 x 40 s |
+| Feed | 3.6 s | 2.4 s |
+| Noise / who minds | afraid victims scream (17 m); witnesses within 12-16 m run | silent; only someone within **7 m** who sees it runs |
+| Memory | every state has one; trust and "all heard" open more | one, **first time only** - after that a fox is a meal (no frozen world, control returns at once) |
+| Effort | they walk their routine; you can talk, lure, wait for sleep | skittish: notices a sprinting vampire from ~13 m, a walking one from ~8.5 m, a human from ~4 m; asleep by day (creep up), goes to ground for ~100 s after a feed |
+Humans stay worth more (information, bigger rush, deeper memories); the fox is the quick, safe, small drink.
+
+### Controller tuning
+`FormData.deceleration` and `turn_grip` are new data; values (acceleration / deceleration / grip): Vampire 42 / 70 / 55 (was 26
+for everything), Human 30 / 48 / 42 (was 16). `Player.steer` raises the speed *along* the wanted direction at the acceleration rate,
+sheds speed (letting go, easing the stick, reversing) at the braking rate, and cancels sideways drift at the grip rate; in
+the air the rates are scaled down. Stopping from a full run: Vampire 0.55 m in 0.13 s, Human 0.29 m in 0.12 s. Reaching 90% of run
+speed takes ~0.2 s, so it is not instant. The analog stick is unchanged (deadzone 0.25, magnitude -> speed). A part-tilted
+stick is a part-speed walk. Nothing about the InputMap, vibration or bindings changed.
+
+### Wall-to-roof climbing (prototype)
+Four climbs (manor wall -> roof, ruined wall top, cottage wall -> roof, **watch hut -> roof**) and the **broken roof** route.
+All are `TraversalPlacement` data. A climb is not physics and not free climbing: you approach the foot of a marked wall facing it,
+Sense shows the wall strip, the prompt appears (`Scale the manor wall to the roof`), and the body climbs hand over hand
+(`HumanoidModel.climb_pose`), dust falling, mist trailing off the cloak, then flows over the lip. Dropping needs you to face the
+edge. The start points were moved to hug the wall (they floated ~1 m out).
+
+### Coffin
+Interacting opens `RestMenu` (world frozen, `PauseControl` reason `rest`): the options come from `DayNightProfile.rest_options`
+(`RestOption`: label, hour, wake text; the four above are in `content/time/default.tres`). Options less than an hour ahead are not
+offered. Enter / A chooses, Esc / B stays awake (and the same key press can no longer also open the pause menu). Everything the
+coffin always reset still resets, and **the animals** are reset too.
+
+### Values tuned
+| Value | Before | After | Reasoning |
+|---|---|---|---|
+| Vampire / Human acceleration | 26 / 16 | 42 / 30 | reaches speed in ~0.2 s |
+| Braking / turn grip | (= acceleration) | 70 / 55 and 48 / 42 | crisp stops and turns |
+| Blood HUD | no number | `N / 100` under the vessel | the player asked; vessel kept |
+| Cape rest angle | hem 0.43 m behind, flare *forward* | 3 segments, trailing back with speed | no clipping |
+| Route reach | 2.1 m (end spheres), no level / side / facing | 2.0 m + level 1.1 + side + lateral 1.2 + facing + landing | the traversal fix |
+| Human blood drain / Vampire drain / Sense cost | 0.02 / 0.16 / 0.55 + 2 | **unchanged** | not retuned; tests confirm 0.02/s and 0.16/s in real time |
+| Sunlight, day length, night | - | **untouched** | three minutes at noon, 20-minute day |
+
+### Test changes (and why)
+| Test | Change | Why |
+|---|---|---|
+| unit: memory counts | Tomas / Corvin 3 -> 5 | trusting + deepest memories |
+| smoke / feel: coffin | press Enter after interact | the coffin now asks when you wake (first answer = old behaviour) |
+| scenario / feel: trust feed | expects "Flour on Her Hands" (and the well key, which that memory also reveals) | Tomas now has a memory of his own for trust; it opens the key too, so trust is still a way to the key |
+| feel: routes | new prompt strings; "at the window it begins" now faces the window; the thin ruined-wall top is stood on 0.2 m behind the end (0.6 m put the test player in the air); the blocked-landing check now expects the route *not to be offered* (the mid-route fallback moved to polish_tests) | the traversal rules |
+| feel: "blood is a living vessel, not a number" | allows the drawn number and the reward line | the number was requested; the check now looks for stray numeric labels |
+| test_base `_run_until_focus` | keeps going 0.12 s after the prompt appears | the body now stops almost at once, so it halted right at the edge of range where the prompt flickers |
+| `Player.place_at` | clears the interaction focus | a teleported player kept the old prompt for 0.08 s (found by a new test) |
+
+### How to run what is new
+| Command | What |
+|---|---|
+| `godot --headless --path . res://tests/polish_tests.tscn` | the Task 1.8 suite (186 checks); `-- only=traversal,blood,reward,movement,cape,fox,people,coffin,memories` runs sections |
+| `godot --path . res://tests/polish_playtest.tscn -- <dir>` | scripted windowed walk through the new features with ~30 screenshots |
+| `godot --path . res://tests/model_probe.tscn -- <dir>` | the vampire model posed (idle, walk, run, jump, transformation, climb, feed) from the side and behind |
+
+### Manual playtest observations
+**What was and was not done.** As in Task 1.75: I ran the game windowed, with the real renderer and real (injected) key events,
+through `tests/polish_playtest.gd` (30 screenshots), posed the model with `tests/model_probe.gd` (14 shots), re-ran the Task 1.75
+`playtest_driver` (41 screenshots) as a regression look, ran `perf_probe` and a 300-second `soak_probe`, and looked at the pictures. I did
+**not** play by hand, did **not** hold a controller (the GameSir G7 SE and a PS5 pad were not available), and **cannot hear** the procedural
+audio or feel the vibration. Everything below is "reads right in stills and numbers", not "feels right in the hands".
+
+**Things looking at it changed** (the automated checks did not catch these):
+1. The roof-hole route drew a pale "wall" strip through the manor window area under Sense; routes that are not walls now opt out (`show_wall`).
+2. The feeding camera hid the fox behind the vampire's own back (a person is fed over, a fox is under the torso). The vampire now kneels *beside*
+   it and the camera swings round to the side with a steeper look-down (`FeedSource.feed_stand_side / feed_camera_yaw / feed_camera_pitch`); the
+   fox is plainly visible, limp, with the cape draped over the vampire's back. (Two earlier settings were tried and rejected by looking.)
+3. The HUD's left column grew by a line (the reward's effect under the timer): its box was enlarged so nothing hangs below the screen. The memory
+   screen's new reward block fits at 1280x720 with the facts and the prompt (checked at full reveal).
+4. The cape bug was found by reading the code (a positive `rotation.x` swings a hanging limb forward); the model probe confirmed the fix - the hem
+   trails behind in walk, run, jump and transformation - and showed the same sign error had been throwing the feeding pose's arms *backward*.
+5. A test found a stale prompt surviving a teleport; `Player.place_at` now clears it. Another found that Esc closed the coffin menu and opened the
+   pause menu in the same frame.
+
+**Against the brief's questions** (stills and numbers only):
+- *Is traversal intentional?* In the frames the prompt names the building and the direction, and a Sense strip marks the wall. In tests the case the
+  playtest described (press E again right after going in) now does nothing, and every wrong-side, wrong-level and wrong-facing case offers nothing.
+- *A supernatural wall climb?* The frames show the hands-over-hand pose, dust, a mist trail and the body flowing over the lip. It is still a short,
+  fixed, authored path - not the feeling of free climbing, which was out of scope.
+- *Controller:* a running stop measures 0.13 s / 0.55 m with the same numbers on keyboard and pad. I cannot say how it *feels* in the hands.
+- *If I spawned as a vampire with no marker, would I want to explore?* Closer than before, for a few minutes: with Sense on at night there are foxes to
+  hunt, windows, climb strips and a hole in the roof drawing the eye, people whose prompt says "something to tell", and three things to read. It is still
+  one very small estate; I can say it creates curiosity in screenshots, not that it holds it for an hour.
+
+**Performance:** `perf_probe` (GTX 1660 SUPER, windowed): about 4.2 ms per frame (the 240 fps cap) in the yard by day, ~1250 nodes and ~410-430 draw
+calls (was ~1100 / ~400): the extra nodes are the foxes, the cape segments, the rest menu and the route markers. **Soak** (`soak_probe`, 8x, 300 s,
+foxes included): no script errors, no deaths, one feed and one memory.
+
+### What remains intentionally unfinished
+No Wolf / Bat, no combat, no quest log (tidings are lines, not objectives), the fox has no pack or ecology (two foxes, one den),
+no animals other than foxes, climbing is authored routes (not free), the roof-hole rim blocks bodies but a vampire can still *jump*
+over it on purpose, clues are single lines, memories are still text over a frozen world, NPC pathing is still straight lines.
+
+### Known issues
+- Controllers and vibration are still untested on hardware.
+- Sense route markers for the broken roof sit near the manor window's markers when you are close to both; their labels can overlap.
+- A fox that has just bolted is only cornered by running it down; there is no scent trail.
+- The feed camera is a fixed orbit, so a feed on the ground leans on the vampire's lowered back for framing (steeper pitch helps).
+- `tests/out/` is where windowed tests write screenshots (git-ignored).
+- Headless runs now also print "RID allocations ... leaked at exit" lines (cached UI fonts used by the blood number); like the ObjectDB message they are harmless.
+
+### Design questions raised by this pass
+1. Is "sleep until daylight" what the player meant by "sleep to sunlight"? (An alternative reading: sleep *through* the day until the next dusk without waking as a Human - which is "until dusk" as before.)
+2. Should foxes (and other creatures) be able to *see* a vampire's transformation and bolt? Today a transformation only unsettles humans.
+3. Should the fox's memory repeat per individual fox instead of once per species?
+4. Should an animal's Bloodrush differ in *kind* (not only strength): e.g. keener Sense, quieter steps? `BloodSurge` has a fixed bundle today.
+5. Should tidings eventually show in a quiet journal? (Out of scope now: the HUD "Learned:" line is the only record.)
+6. How much should hearing a story change what Sense shows (names today; locations / schedules next)?
+7. Should a roof rim be a visible gate (jump to enter) or should entering the manor by the roof always be via the route?
+8. Should witnesses of a fox feed react at all? (Today: yes within 7 m. A hunter's view of "the vampire eats foxes" may be less alarming than "the vampire eats a person".)
+
+---
 
 ## Task 1.75 - vampire feel & immersion
 

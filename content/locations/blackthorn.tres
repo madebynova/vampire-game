@@ -1,9 +1,11 @@
-[gd_resource type="Resource" script_class="LocationData" load_steps=16 format=3]
+[gd_resource type="Resource" script_class="LocationData" load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/location_data.gd" id="1_loc"]
 [ext_resource type="Script" path="res://scripts/data/npc_placement.gd" id="2_np"]
 [ext_resource type="Script" path="res://scripts/data/secret_placement.gd" id="3_sp"]
 [ext_resource type="Script" path="res://scripts/data/traversal_placement.gd" id="4_tr"]
+[ext_resource type="Script" path="res://scripts/data/animal_placement.gd" id="5_ap"]
+[ext_resource type="Script" path="res://scripts/data/inspect_placement.gd" id="6_ip"]
 
 [sub_resource type="Resource" id="tr_manor_window"]
 script = ExtResource("4_tr")
@@ -11,8 +13,8 @@ id = &"manor_window"
 type = 0
 a = Vector3(6.2, 0, -4.6)
 b = Vector3(6.2, 0, -7.4)
-prompt_a = "Slip through the window"
-prompt_b = "Slip out through the window"
+prompt_a = "Slip into the manor through the window"
+prompt_b = "Slip out of the manor through the window"
 sense_label = "Window"
 
 [sub_resource type="Resource" id="tr_cottage_window"]
@@ -21,8 +23,8 @@ id = &"cottage_window"
 type = 0
 a = Vector3(22.1, 0, 13.9)
 b = Vector3(22.1, 0, 16.5)
-prompt_a = "Slip in through the cottage window"
-prompt_b = "Slip out through the window"
+prompt_a = "Slip into the cottage through the window"
+prompt_b = "Slip out of the cottage through the window"
 sense_label = "Window"
 
 [sub_resource type="Resource" id="tr_gatehouse_window"]
@@ -31,39 +33,106 @@ id = &"gatehouse_window"
 type = 0
 a = Vector3(-23.35, 0, 0.8)
 b = Vector3(-23.35, 0, 3.6)
-prompt_a = "Slip in through the gatehouse window"
-prompt_b = "Slip out through the window"
+prompt_a = "Slip into the gatehouse through the window"
+prompt_b = "Slip out of the gatehouse through the window"
 sense_label = "Window"
 
 [sub_resource type="Resource" id="tr_manor_roof"]
 script = ExtResource("4_tr")
 id = &"manor_roof"
 type = 1
-a = Vector3(-5, 0, -4.9)
-b = Vector3(-5, 3.9, -6.8)
-prompt_a = "Climb to the manor roof"
-prompt_b = "Drop down to the yard"
-sense_label = "Roof"
+a = Vector3(-5, 0, -5.35)
+b = Vector3(-5, 3.9, -6.9)
+prompt_a = "Scale the manor wall to the roof"
+prompt_b = "Drop from the manor roof to the yard"
+sense_label = "Climb: manor wall"
+barrier = 0.3
+
+[sub_resource type="Resource" id="tr_manor_hatch"]
+script = ExtResource("4_tr")
+id = &"manor_hatch"
+type = 1
+a = Vector3(6.55, 0, -13.9)
+b = Vector3(6.55, 3.9, -11.9)
+prompt_a = "Climb out through the broken roof"
+prompt_b = "Drop through the broken roof into the hall"
+sense_label = "Broken roof"
+lip_height = 0.65
+show_wall = false
+facing_min = -1.0
+barrier = 1.0
 
 [sub_resource type="Resource" id="tr_ruined_wall"]
 script = ExtResource("4_tr")
 id = &"ruined_wall"
 type = 1
-a = Vector3(18, 0, 12.3)
+a = Vector3(18, 0, 11.85)
 b = Vector3(18, 2.6, 11)
-prompt_a = "Climb onto the ruined wall"
-prompt_b = "Drop down to the yard"
-sense_label = "Ledge"
+prompt_a = "Scale the ruined wall"
+prompt_b = "Drop down from the ruined wall"
+sense_label = "Climb: ruined wall"
+barrier = 0.65
 
 [sub_resource type="Resource" id="tr_cottage_roof"]
 script = ExtResource("4_tr")
 id = &"cottage_roof"
 type = 1
-a = Vector3(25.6, 0, 18)
-b = Vector3(23.3, 3.1, 18)
-prompt_a = "Climb to the cottage roof"
-prompt_b = "Drop down from the roof"
-sense_label = "Roof"
+a = Vector3(24.85, 0, 18)
+b = Vector3(23.1, 3.1, 18)
+prompt_a = "Scale the cottage wall to the roof"
+prompt_b = "Drop from the cottage roof to the yard"
+sense_label = "Climb: cottage wall"
+barrier = 0.37
+
+[sub_resource type="Resource" id="tr_hut_roof"]
+script = ExtResource("4_tr")
+id = &"hut_roof"
+type = 1
+a = Vector3(11.5, 0, 22.2)
+b = Vector3(11.5, 2.9, 23.9)
+prompt_a = "Scale the watch hut to its roof"
+prompt_b = "Drop from the hut roof to the path"
+sense_label = "Climb: watch hut"
+barrier = 0.35
+
+[sub_resource type="Resource" id="an_fox_a"]
+script = ExtResource("5_ap")
+animal_id = &"fox"
+position = Vector3(19, 0, 9.2)
+yaw_degrees = 180.0
+den_position = Vector3(19.5, 0, 9.4)
+
+[sub_resource type="Resource" id="an_fox_b"]
+script = ExtResource("5_ap")
+animal_id = &"fox"
+position = Vector3(20.4, 0, 9.8)
+yaw_degrees = 200.0
+den_position = Vector3(19.5, 0, 9.4)
+
+[sub_resource type="Resource" id="in_watch_log"]
+script = ExtResource("6_ip")
+id = &"watch_log"
+position = Vector3(9.6, 0.92, 23.9)
+prompt = "Read the watch log"
+text = "The night watchman's log, in a careful hand: 'All quiet.' 'All quiet.' 'All quiet.' 'All quiet.' A fifth line has been begun and scratched out so hard that the page is torn."
+mark_size = Vector2(0.32, 0.24)
+mark_color = Color(0.9, 0.86, 0.72, 1)
+
+[sub_resource type="Resource" id="in_north_wax"]
+script = ExtResource("6_ip")
+id = &"north_wax"
+position = Vector3(1.0, 0.14, -16.9)
+prompt = "Examine the ground under the north window"
+text = "Candle wax, still soft, spattered on the grass beneath the broken north window, and a smear of lavender oil on the sill above. Whoever stood here stood a long while. The drips lead toward the pines."
+mark_size = Vector2(0.7, 0.5)
+mark_color = Color(0.92, 0.86, 0.66, 1)
+
+[sub_resource type="Resource" id="in_gate_lock"]
+script = ExtResource("6_ip")
+id = &"gate_lock"
+position = Vector3(3.0, 1.1, 29.2)
+prompt = "Examine the gate lock"
+text = "The lock plate on this side is smooth and untouched. Through the bars you can see the outer plate: the keyhole is scored with fresh scratches, as if someone has been trying to get IN, not out."
 
 [sub_resource type="Resource" id="np_tomas"]
 script = ExtResource("2_np")
@@ -110,5 +179,7 @@ display_name = "Blackthorn Estate"
 coffin_position = Vector3(-5.6, 0, -13.2)
 npcs = Array[ExtResource("2_np")]([SubResource("np_tomas"), SubResource("np_elise"), SubResource("np_corvin")])
 secrets = Array[ExtResource("3_sp")]([SubResource("sp_key"), SubResource("sp_ledger")])
+animals = Array[ExtResource("5_ap")]([SubResource("an_fox_a"), SubResource("an_fox_b")])
+inspectables = Array[ExtResource("6_ip")]([SubResource("in_watch_log"), SubResource("in_north_wax"), SubResource("in_gate_lock")])
 lamp_positions = PackedVector3Array(1, 0, -4.6, 5, 0, 4, 1, 0, 12.5, 5, 0, 21, -8, 0, 3.9, -17.5, 0, 3.9, 8.6, 0, 11.7, 15.4, 0, 17.2)
-traversals = Array[ExtResource("4_tr")]([SubResource("tr_manor_window"), SubResource("tr_cottage_window"), SubResource("tr_gatehouse_window"), SubResource("tr_manor_roof"), SubResource("tr_ruined_wall"), SubResource("tr_cottage_roof")])
+traversals = Array[ExtResource("4_tr")]([SubResource("tr_manor_window"), SubResource("tr_cottage_window"), SubResource("tr_gatehouse_window"), SubResource("tr_manor_roof"), SubResource("tr_manor_hatch"), SubResource("tr_ruined_wall"), SubResource("tr_cottage_roof"), SubResource("tr_hut_roof")])

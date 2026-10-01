@@ -129,6 +129,11 @@ func _can_open() -> bool:
 	var mv := get_tree().get_first_node_in_group(&"memory_view") as MemoryView
 	if mv and mv.is_open():
 		return false   # a Blood Memory is its own held moment
+	if PauseControl.has_reason(&"rest"):
+		return false   # the coffin's own question is open
+	var rest := get_tree().get_first_node_in_group(&"rest_menu") as RestMenu
+	if rest != null and rest.closed_this_frame():
+		return false   # ...and the Esc that just closed it is not also a request to pause
 	var player := get_tree().get_first_node_in_group(&"player") as Player
 	if player and (player.state.is_dead() or player.state.mode == PlayerState.Mode.RESTING):
 		return false

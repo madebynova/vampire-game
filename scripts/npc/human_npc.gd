@@ -1,5 +1,5 @@
 class_name HumanNpc
-extends CharacterBody3D
+extends FeedSource
 ## A living human with a daily routine (NpcProfile.schedule), a light personality and a heartbeat.
 ##
 ## CALM      going about their schedule; notices a Vampire that is in view (or right behind them)
@@ -13,16 +13,22 @@ extends CharacterBody3D
 enum Mode { CALM, FLEEING, ENTRANCED, DRAINED, SLEEPING, FOLLOWING, STUNNED }
 
 signal mode_changed(new_mode: Mode)
+## They told you something worth knowing (see Tiding).
+signal told_something(tiding: Tiding)
 
 ## Tests/tools can freeze routines: NPCs then stand at their spawn spot.
 static var schedules_enabled := true
 ## Which blood-memories the player has already tasted: npc id -> {memory condition: true}. Survives
 ## nights (discoveries persist); Vampiric Sense uses it to hint at what is still unheard.
 static var tasted: Dictionary = {}
+## Which things people have told you: npc id -> {tiding id: true}. Also survives nights.
+static var heard: Dictionary = {}
 
 
+## A fresh game: nothing tasted, nothing heard.
 static func reset_tasted() -> void:
 	tasted.clear()
+	heard.clear()
 
 @export var profile: NpcProfile
 @export var close_notice_radius := 2.2
@@ -559,7 +565,10 @@ func talk(actor: Player) -> void:
 		pool = profile.trust_lines
 	elif tier == 0 and _darkness() > 0.5 and not profile.night_lines.is_empty():
 		pool = profile.night_lines
-	if not pool.is_empty():
+	var news := next_tiding()
+	if news != null:
+		_tell(news)      # something worth knowing comes before small talk
+	elif not pool.is_empty():
 		var line := pool[_line_index % pool.size()]
 		_line_index += 1
 		_say("%s: \"%s\"" % [profile.display_name, line], 5.0)
@@ -570,6 +579,54 @@ func talk(actor: Player) -> void:
 	if tier >= 2 and profile.can_follow and not profile.trust_lines.is_empty():
 		_set_mode(Mode.FOLLOWING)
 		_follow_timer = follow_duration
+
+
+# ---------------------------------------------------------------- what they can tell you
+
+## The next thing this person would tell you right now, or null: in order, the trust it needs reached, the
+## right time of day, after whatever it follows, and not already told.
+func next_tiding() -> Tiding:
+	var told: Dictionary = heard.get(profile.id, {})
+	var night := _darkness() > 0.5
+	for t in profile.tidings:
+		if told.has(t.id) or t.min_trust > trust_tier():
+			continue
+		if (t.when == &"night" and not night) or (t.when == &"day" and night):
+			continue
+		if t.after != &"" and not told.has(t.after):
+			continue
+		return t
+	return null
+
+
+## Do they have something to tell you?
+func has_news() -> bool:
+	return next_tiding() != null
+
+
+func tidings_told() -> int:
+	return heard.get(profile.id, {}).size()
+
+
+## Say it, remember it was said, and let it do what it does: name a stranger, point at a hidden thing.
+func _tell(t: Tiding) -> void:
+	if not heard.has(profile.id):
+		heard[profile.id] = {}
+	heard[profile.id][t.id] = true
+	_say("%s: \"%s\"" % [profile.display_name, t.text], clampf(2.5 + t.text.length() * 0.05, 5.0, 12.0))
+	if t.introduces != &"":
+		for n in get_tree().get_nodes_in_group(&"npcs"):
+			var other := n as HumanNpc
+			if other != null and other.profile.id == t.introduces:
+				other.known = true
+	if t.reveals_secret != &"":
+		get_tree().call_group(&"secrets", &"reveal", t.reveals_secret)
+	if t.learned != "":
+		var hud := get_tree().get_first_node_in_group(&"hud") as Hud
+		if hud != null:
+			hud.toast("Learned: %s" % t.learned, UiStyle.GOLD, 7.0)
+		Sfx.play(&"secret", -10.0)
+	told_something.emit(t)
 
 
 # ---------------------------------------------------------------- feeding
@@ -628,6 +685,8 @@ func interrupt_feed() -> void:
 
 ## What state the victim was in when grabbed decides which memory the blood holds.
 func feed_condition() -> StringName:
+	if _deep_ready():
+		return &"deep"
 	if was_asleep:
 		return &"asleep"
 	if was_afraid_when_grabbed:
@@ -677,6 +736,20 @@ func _memory_condition_for(style_id: StringName) -> StringName:
 	return &"calm"
 
 
+## The deepest memory: once every other memory a person holds has been tasted, the next feed - however it
+## is taken - opens the one beneath them all (their profile needs a memory with condition &"deep").
+func _deep_ready() -> bool:
+	if not profile.has_memory(&"deep"):
+		return false
+	var t: Dictionary = tasted.get(profile.id, {})
+	if t.has(&"deep"):
+		return false
+	for m in profile.memories:
+		if m.condition != &"deep" and m.condition != &"any" and not t.has(m.condition):
+			return false
+	return true
+
+
 func _mark_tasted() -> void:
 	var mem := profile.memory_for(feed_condition())
 	if mem == null:
@@ -688,6 +761,8 @@ func _mark_tasted() -> void:
 
 ## True while the memory this person would give in their current state has not been heard yet.
 func has_unheard_memory() -> bool:
+	if _deep_ready():
+		return true
 	var mem := profile.memory_for(_memory_condition_for(potential_style_id()))
 	return mem != null and not tasted.get(profile.id, {}).has(mem.condition)
 
@@ -713,6 +788,7 @@ func get_feed_result() -> Dictionary:
 		"style": style,
 		"style_id": style.id,
 		"blood_type": _blood_name(),
+		"blood_note": blood.description if blood else "",
 		"yield": profile.blood_yield * _yield_multiplier() * style.yield_multiplier,
 		"surge_name": style.surge_name,
 		"surge_power": style.surge_power * (blood.surge_power_multiplier if blood else 1.0),
@@ -888,6 +964,8 @@ func get_sense_data(dist := 0.0) -> Dictionary:
 
 
 func feed_style_hint() -> String:
+	if _deep_ready():
+		return "the deepest memory waits"
 	var st := ContentRegistry.get_def(&"FeedStyle", potential_style_id()) as FeedStyle
 	return st.sense_hint if st else "a memory waits"
 

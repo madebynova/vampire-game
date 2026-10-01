@@ -8,39 +8,54 @@ This repository is a **prototype**, not the game. Its purpose is to answer one q
 small on purpose and are meant to create decisions where they meet - sunlight vs. feeding vs. time of
 day vs. what you are (Human or Vampire) - rather than to pile up features.
 
-## Current status: Task 1.75 (vampire feel & immersion pass)
+## Current status: Task 1.8 (vampire world & traversal polish)
 
-Task 1 made the loop work, Task 1.5 made it interact (day/night, sun, routines, modding foundation).
-Task 1.75 is about **feel**: what it is like to *become* a vampire, feed, perceive and move. Nothing big
-was added; what exists was made to read, sound and feel like something.
+Task 1 made the loop work, Task 1.5 made it interact (day/night, sun, routines, modding foundation), Task 1.75 made it
+*feel* like something. Task 1.8 makes the small world **reliable and purposeful**: traversal you can trust (it only ever
+happens on purpose, and only the way you meant), controls that grip, a number on the blood and rewards that explain
+themselves, a second thing to drink, people who tell you things, a coffin that asks when you will wake, and more to find.
+Nothing big was added; the fox is the largest new system.
 
 ### Playable today
 - **Human <-> Vampire** with a real transformation: the world tightens into a red-black tunnel, the body
   rises and arches, time stutters, a shockwave and chromatic tear mark the change, the night suddenly
   opens around you. Going back is quieter: a long exhale, warmth, the cloak turning to ash.
 - **Blood as something alive**: a vessel that sloshes, pulses with your own heart (slow and heavy as a
-  vampire, quick when hungry, feeding or burning), sheds drops while Sense runs, flashes when you drink.
-  No numbers. A Human spends blood very slowly, a Vampire noticeably faster.
+  vampire, quick when hungry, feeding or burning), sheds drops while Sense runs, flashes when you drink - with a plain
+  **`73 / 100`** under it. A Human spends blood very slowly, a Vampire noticeably faster.
 - **Feeding you want to do**: how it plays depends on the victim - a sleeper is fed on quietly and gives
   a long, gentle *Dreamblood*; someone unaware is steady; a terrified victim screams, pays more blood and a
-  hot short *Fury* - and anyone who **sees** it runs. A good feed leaves a **Bloodrush** (quicker, higher,
-  Sense free, wounds close faster, a little more patience with the sun).
+  hot short *Fury* - and anyone who **sees** it runs. A good feed leaves a **Bloodrush**, and the screen now says what it
+  does and for how long ("+22% speed, +14% jump, Sense is free, sun burns 20% slower").
+- **A second blood: foxes.** Two foxes live under the old wall - curled in their den by day, out among the lamps at
+  night, quick to bolt from a vampire. Sense finds them; creep up on a sleeper (or run one down), feed: quiet, safe
+  and over in 2.4 s, but less blood and a lighter rush (*Instinct*) than a person. The first drink holds a creature's-eye memory.
 - **Blood Memories you experience**: the world freezes, drains into the memory's colour and dims, the room's
   sound recedes and a procedural bed plays; the memory is told a few words at a time. It never times out,
-  and only a deliberate press closes it (the key still held from the feed cannot).
+  and only a deliberate press closes it. Fifteen among the people, one more in the fox - including a memory only **trust**
+  opens and a **deepest** memory that opens once you have heard the rest.
+- **People who tell you things**: talk to someone as a Human and, as they come to trust you, they tell you what they know -
+  where the foxes den, who sleeps where and when, who is afraid of what, which of their dreams is worth drinking. A gold
+  "Learned:" line says what you got; a stranger they name is called by name when you Sense them.
 - **Vampiric Sense**: the nearest thing you face is the one you attend to; scan waves make people flare;
   strangers are pale and flicker, people you know are steady and warm; heartbeats sound different calm,
-  asleep or afraid; a heart very close throbs through your hands. Sense tells you when a memory is still
-  unheard ("a dream waits"). It costs a little blood up front and a steady trickle - and is free during a Bloodrush.
-- **Traversal only a vampire has**: slip through windows (you dissolve to mist at the sill), climb to the
-  manor roof, the ruined wall and the cottage roof. Humans see none of it.
+  asleep or afraid; a heart very close throbs through your hands. It shows people, **animals**, hidden things, and now the
+  **walls you can scale** as a pale strip up the stone. It costs a little blood up front and a steady trickle - and is
+  free during a Bloodrush.
+- **Traversal only a vampire has - and only on purpose**: slip through windows (you dissolve to mist at the sill), scale the manor
+  wall, the cottage wall and the watch hut to their roofs, climb onto the ruined wall, climb out of (or drop through) the broken
+  roof of the manor. You are only offered a route when you are on the right level, on the right side of the wall, facing it - so
+  "in" is never "out", and a roof never offers the room beneath it.
 - **Day/night cycle** (20 real minutes per day), **sunlight** (about three minutes of full noon sun to die),
-  **NPC routines**, **trust and lures**, **coffin** - as in Task 1.5, unchanged in their numbers.
-- **HUD and menus**: a blood vessel, a serif 12-hour clock with a sun/moon glyph, prompts that show the
+  **NPC routines**, **trust and lures** - as before, unchanged in their numbers.
+- **The coffin asks when you will wake**: until dusk (as always), midnight, dawn, or **daylight** (wake as a Human into the day).
+- **HUD and menus**: a blood vessel with its number, a serif 12-hour clock with a sun/moon glyph, prompts that show the
   real button for the device you last used (keyboard, Xbox-style, PlayStation), a designed controls screen,
   a pause menu (Resume / Controls / Options / Quit to Title), a small title screen.
-- **Three people** with data-driven routines - a groundskeeper, a seamstress, and a night watchman who
-  patrols the road all night and sleeps by day - so there is someone to find at almost every hour.
+- **Movement that grips**: crisp stops and turns (a running vampire stops in about half a metre, not a metre and a half), the
+  same on keyboard and pad; a part-tilted stick is a part-speed walk.
+- **Three people** with data-driven routines - a groundskeeper, a seamstress, and a night watchman - **two foxes**, and three
+  small things to read (a watch log, candle wax under a window, a scratched gate lock) that agree with what people say.
 
 ### Controls
 
@@ -49,11 +64,12 @@ was added; what exists was made to read, sound and feel like something.
 | Move / look | WASD / mouse | left stick / right stick | same |
 | Run | Shift (hold) | RT (hold), or click **L3** to latch until you stop | R2 / L3 |
 | Jump | Space | A | Cross |
-| Talk, dig, sleep, **slip through windows, climb** | E | X | Square |
+| Talk, dig, read, sleep, **slip through windows, climb** | E | X | Square |
 | **Feed** (Vampire, hold) | E | X | Square |
 | Transform Human <-> Vampire | F | Y | Triangle |
 | Vampiric Sense (Vampire, toggle) | Q | LB (R3 also works) | L1 (R3) |
 | Continue a Blood Memory | E / Space / Enter / click | A, B or X | Cross / Circle / Square |
+| Choose when to wake (at the coffin) | arrows + Enter, Esc to stay awake | D-pad + A, B to stay awake | D-pad + Cross, Circle |
 | Pause | Esc | Menu | Options |
 | Controls screen | H | View | Create |
 | Debug overlay | F3 | - | - |
@@ -109,9 +125,11 @@ All are headless-capable (`godot --headless --path . <scene>`); replace `godot` 
 | `res://tests/smoke_test.tscn` | the original acceptance playthrough (movement, transform, Sense, feeding, sunlight, coffin, repeatable loop) |
 | `res://tests/scenario_tests.tscn` | Task 1.5 scenarios: routines, sleepers, memory variants, trust, witnesses, tiered Sense, embers, night vs day |
 | `res://tests/feel_tests.tscn` | Task 1.75: transformation presentation, blood and Bloodrush, feeding per victim state, witnesses, the Blood Memory view and its input rules (held keys, pad, mouse), Sense, every traversal route both ways (and blocked exits), pause and menus, controller-only play, HUD and controls screen, coffin, the cleaned-up world |
+| `res://tests/polish_tests.tscn` | Task 1.8: traversal that only happens on purpose (direction, level, side, facing, blocked landings, the broken roof), the blood number and what a Bloodrush says, controller movement and bindings, the cape through running / jumping / transforming, the fox (data, behaviour, Sense, feeding, witnesses), what people tell you, the coffin's choices, the extra memories and clues (`-- only=traversal,fox,...` runs sections) |
 
 Windowed runs accept a screenshot directory: `godot --path . res://tests/feel_tests.tscn -- <dir>`.
-Dev tools: `playtest_driver.tscn` (a scripted walk through the playtest sequence with screenshots),
+Dev tools: `playtest_driver.tscn` (a scripted walk through the playtest sequence with screenshots), `polish_playtest.tscn` (the same for
+the Task 1.8 features), `model_probe.tscn` (the vampire model posed and photographed from the side and behind),
 `world_probe.tscn` (layout views by day / night / routes / title), `soak_probe.tscn` (8x fast-forward with wandering, feeding and memories), `boot_probe.tscn` (does it start),
 `sun_map.tscn`, `time_probe.tscn`, `visual_probe.tscn`, `audio_probe.tscn`, `perf_probe.tscn`.
 
@@ -129,7 +147,7 @@ example mod is included. There is no mod manager or stable API yet. Read
 
 ## Project layout
 ```
-content/    data: forms, abilities, NPCs, blood, feeding styles, sunlight, day/night, locations (incl. routes), sounds
+content/    data: forms, abilities, NPCs (incl. what they tell you), animals, blood, feeding styles, sunlight, day/night (incl. coffin wake times), locations (routes, clues), sounds
 scripts/    core (registry, input, settings, audio, haptics, pause), data, player, abilities, interaction, npc, world, ui, visual
 scenes/     title, main, player, npc, props
 shaders/    sky, sense, screen effects
@@ -141,7 +159,7 @@ examples/   a working example mod
 
 ## Limitations
 Greybox environment, placeholder procedural audio (no music), no navmesh (NPC pathing is simple), one small
-location, three people, no save games, traversal is authored routes (not free climbing), the controllers are
+location, three people and two foxes, no save games, traversal is authored routes (not free climbing), the controllers are
 untested on hardware, and there is no built executable yet. Details in the notes.
 
 ## License

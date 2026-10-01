@@ -39,7 +39,7 @@ var _fall_speed := 0.0
 func _ready() -> void:
 	add_to_group(&"player")
 	collision_layer = 2
-	collision_mask = 1 | 4
+	collision_mask = 1 | 4 | Greybox.PLAYER_ONLY
 	camera_rig.attach(self)
 	_setup_components($Components)
 
@@ -49,6 +49,24 @@ func _setup_components(node: Node) -> void:
 		if child is PlayerComponent:
 			child.setup(self)
 		_setup_components(child)
+
+
+## One step of ground (or air) steering: `hv` is the current horizontal velocity, `target` the velocity the
+## stick asks for. The speed along the wanted direction rises at `accel`; letting go, easing off or
+## reversing sheds speed at the (much higher) `decel`; and any sideways drift left over from the old
+## direction is cancelled at `grip`. Plain `move_toward` on the whole vector uses one rate for all of
+## it, which is what made turning and stopping feel like skating on ice.
+static func steer(hv: Vector3, target: Vector3, accel: float, decel: float, grip: float, delta: float) -> Vector3:
+	if target.length() < 0.01:
+		return hv.move_toward(Vector3.ZERO, decel * delta)
+	var dir := target.normalized()
+	var want := target.length()
+	var along := hv.dot(dir)
+	var lateral := hv - dir * along
+	lateral = lateral.move_toward(Vector3.ZERO, grip * delta)
+	var rate := decel if (along < 0.0 or along > want) else accel
+	along = move_toward(along, want, rate * delta)
+	return dir * along + lateral
 
 
 func get_speed_multiplier() -> float:
@@ -80,6 +98,7 @@ func place_at(pos: Vector3, yaw: float) -> void:
 	camera_rig.yaw = yaw
 	camera_rig.pitch = deg_to_rad(-10.0)
 	camera_rig.snap()
+	interactor.reset_focus()   # whatever was in reach where we were is not in reach here
 
 
 func _physics_process(delta: float) -> void:
@@ -107,8 +126,11 @@ func _physics_process(delta: float) -> void:
 	if dir.length() > 1.0:
 		dir = dir.normalized()
 
-	var accel := f.acceleration if is_on_floor() else f.acceleration * 0.4
-	var hv := Vector3(velocity.x, 0.0, velocity.z).move_toward(dir * speed, accel * delta)
+	var grounded := is_on_floor()
+	var hv := steer(Vector3(velocity.x, 0.0, velocity.z), dir * speed,
+		f.acceleration if grounded else f.acceleration * 0.4,
+		f.deceleration if grounded else f.deceleration * 0.25,
+		f.turn_grip if grounded else f.turn_grip * 0.2, delta)
 	velocity.x = hv.x
 	velocity.z = hv.z
 	if not is_on_floor():
@@ -137,7 +159,7 @@ func _physics_process(delta: float) -> void:
 	visual.rotation.y = _facing_yaw
 	visual.animate(hv.length(), is_on_floor(), delta)
 	var grabbing := state.mode == PlayerState.Mode.FEEDING
-	var lean := -0.3 if grabbing else 0.0
+	var lean := (-0.3 - 0.75 * feeding.crouch_amount()) if grabbing else 0.0
 	lean -= 0.32 * visual.pose_amount   # transformation arches the back
 	lean = lerpf(lean, PI * 0.5, visual.lying)
 	visual.body.rotation.x = lerpf(visual.body.rotation.x, lean, minf(1.0, 8.0 * delta))

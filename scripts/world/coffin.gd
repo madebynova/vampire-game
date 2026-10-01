@@ -10,13 +10,14 @@ const CLOTH := Color(0.55, 0.05, 0.1)
 
 @export var spawn_yaw_degrees := -90.0
 @export var min_blood_after_rest := 40.0
-## Sleeping in the coffin skips ahead to this hour (the next dusk).
+## The wake-up hour used when nothing else is chosen (the next dusk, as the coffin always did).
 @export var dusk_hour := 19.0
 
 @onready var spawn: Marker3D = $SpawnPoint
 @onready var interactable: Interactable = $Interactable
 
 var _busy := false
+var _menu: RestMenu
 var _candle_lights: Array[OmniLight3D] = []
 var _lid: Node3D
 var _lid_tween: Tween
@@ -31,8 +32,11 @@ var lid_open := 0.0:
 
 func _ready() -> void:
 	add_to_group(&"coffins")
-	interactable.prompt_text = "Sleep in your coffin until dusk"
-	interactable.interacted.connect(func(actor: Player): wake(actor, &"rest"))
+	interactable.prompt_text = "Sleep in your coffin"
+	interactable.interacted.connect(_on_interacted)
+	_menu = RestMenu.new()
+	add_child(_menu)
+	_menu.cancelled.connect(_drop_choice)
 	_build_visuals()
 
 
@@ -40,6 +44,24 @@ func _process(_delta: float) -> void:
 	var t := Time.get_ticks_msec() / 1000.0
 	for i in _candle_lights.size():
 		_candle_lights[i].light_energy = 0.9 + sin(t * 9.0 + i * 2.0) * 0.12 + sin(t * 23.0 + i) * 0.06
+
+
+## Pressing the interact button at the coffin asks when you will wake.
+func _on_interacted(actor: Player) -> void:
+	if _busy or _menu.is_open():
+		return
+	var tod := get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay
+	if tod == null:
+		wake(actor, &"rest")
+		return
+	_menu.chosen.connect(func(o: RestOption): wake(actor, &"rest", o.hour, o.wake_text), CONNECT_ONE_SHOT)
+	_menu.open(tod)
+
+
+## Chose to stay awake: forget the pending "chosen" listener so it cannot fire on a later menu.
+func _drop_choice() -> void:
+	for c in _menu.chosen.get_connections():
+		_menu.chosen.disconnect(c["callable"])
 
 
 func spawn_yaw() -> float:
@@ -126,8 +148,9 @@ func _lie_down(player: Player) -> void:
 
 
 ## Reset everything a night resets and put the player at the coffin.
-## kind: &"start" (game launch), &"rest" (player chose to sleep), &"death".
-func wake(player: Player, kind: StringName) -> void:
+## kind: &"start" (game launch), &"rest" (player chose to sleep), &"death". For &"rest", `until_hour` is when
+## you wake (negative = the usual dusk) and `text` the line shown on waking.
+func wake(player: Player, kind: StringName, until_hour := -1.0, text := "") -> void:
 	if _busy:
 		return
 	_busy = true
@@ -146,7 +169,7 @@ func wake(player: Player, kind: StringName) -> void:
 	if kind == &"rest":
 		var tod := get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay
 		if tod:
-			tod.skip_to(dusk_hour)
+			tod.skip_to(until_hour if until_hour >= 0.0 else dusk_hour)
 	player.abilities.deactivate_all()
 	player.form.set_form_immediate(&"human")
 	player.health.revive(0.55 if kind == &"death" else 1.0)
@@ -154,6 +177,7 @@ func wake(player: Player, kind: StringName) -> void:
 	player.blood.set_floor(min_blood_after_rest)
 	player.state.set_mode(PlayerState.Mode.RESTING)
 	get_tree().call_group(&"npcs", &"new_day")
+	get_tree().call_group(&"animals", &"new_day")
 	get_tree().call_group(&"secrets", &"new_day")
 	player.place_at(spawn.global_position, spawn_yaw())
 	player.visual.lying = 0.0
@@ -172,7 +196,7 @@ func wake(player: Player, kind: StringName) -> void:
 			&"start":
 				hud.toast("You wake in your coffin. Press %s for controls." % InputSetup.prompt_text(&"toggle_help"), Color(0.9, 0.8, 0.8), 6.0)
 			&"rest":
-				hud.toast("You sleep until dusk. The living have forgotten you.", Color(0.8, 0.8, 0.95), 4.5)
+				hud.toast(text if text != "" else "You sleep until dusk. The living have forgotten you.", Color(0.8, 0.8, 0.95), 4.5)
 			&"death":
 				hud.toast("You wake in your coffin, weaker than before.", Color(0.95, 0.5, 0.5), 5.0)
 	_busy = false

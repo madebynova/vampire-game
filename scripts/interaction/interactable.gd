@@ -7,10 +7,20 @@ signal interacted(actor: Player)
 
 @export var interact_range := 2.3
 @export var prompt_text := "Interact"
+## How far above / below the actor's feet this may sit (metres) and still be reachable. Range is measured
+## on the ground plane, so without this a roof could "reach" the room beneath it (and a room, the roof).
+@export var reach_up := 2.4
+@export var reach_down := 1.6
 
 
 func _ready() -> void:
 	add_to_group(&"interactables")
+
+
+## On the same level as the actor (not a floor above or below)?
+func is_on_level_with(actor: Node3D) -> bool:
+	var dy := global_position.y - actor.global_position.y
+	return dy <= reach_up and dy >= -reach_down
 
 
 ## By default asks the parent (if it implements is_interaction_available()) so simple props

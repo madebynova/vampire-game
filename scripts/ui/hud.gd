@@ -3,7 +3,7 @@ extends CanvasLayer
 ## The HUD, built in code. Presentation only: reads the player's components, never drives them.
 ##
 ## Priorities, in order: blood, form, time, immediate danger (sunlight), the interaction prompt.
-## Everything else is quiet. Blood is a living vessel (BloodGauge) with no number; the clock is
+## Everything else is quiet. Blood is a living vessel (BloodGauge) with a plain "73 / 100" under it; the clock is
 ## a 12-hour serif clock with a sun/moon glyph; prompts carry real button glyphs for whichever
 ## device you touched last; the controls screen sits on the right and is toggled with H / View.
 ## A Blood Memory is not here: MemoryView takes over the whole screen for that.
@@ -16,6 +16,7 @@ var _form_label: Label
 var _tagline: Label
 var _status_label: Label
 var _surge_label: Label
+var _surge_detail: Label
 var _sense_label: Label
 var _gain_label: Label
 var _sun_box: VBoxContainer
@@ -68,15 +69,15 @@ func _build() -> void:
 	_gauge = BloodGauge.new()
 	_gauge.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_gauge.offset_left = 10
-	_gauge.offset_top = -206
+	_gauge.offset_top = -234
 	_gauge.offset_right = 200
-	_gauge.offset_bottom = -16
+	_gauge.offset_bottom = -12
 	_root.add_child(_gauge)
 
 	var side := VBoxContainer.new()
 	side.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	side.offset_left = 196
-	side.offset_top = -176
+	side.offset_top = -270
 	side.offset_right = 520
 	side.offset_bottom = -40
 	side.alignment = BoxContainer.ALIGNMENT_END
@@ -92,8 +93,13 @@ func _build() -> void:
 	side.add_child(_tagline)
 	_status_label = UiStyle.label("", 17, Color(1.0, 0.55, 0.45), false, 5)
 	side.add_child(_status_label)
-	_surge_label = UiStyle.label("", 16, UiStyle.GOLD, true, 5)
+	_surge_label = UiStyle.label("", 18, UiStyle.GOLD, true, 5)
 	side.add_child(_surge_label)
+	# What the timer above is for: the rush's effect in words (so "Fury 0:32" is never a puzzle).
+	_surge_detail = UiStyle.label("", 14, Color(1.0, 0.86, 0.6, 0.9), false, 4)
+	_surge_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_surge_detail.custom_minimum_size = Vector2(300, 0)
+	side.add_child(_surge_detail)
 	_sense_label = UiStyle.label("", 16, UiStyle.BLOOD_BRIGHT, true, 5)
 	side.add_child(_sense_label)
 	_gain_label = UiStyle.label("", 34, Color(1.0, 0.45, 0.45), true, 7)
@@ -328,7 +334,7 @@ func _refresh_status() -> void:
 		_status_label.text = ""
 
 
-func _on_feed_started(_npc: HumanNpc) -> void:
+func _on_feed_started(_npc: FeedSource) -> void:
 	_gain_total = 0.0
 	_gain_hide = 0.0
 
@@ -344,7 +350,8 @@ func _on_blood_gained(amount: float) -> void:
 
 func _on_surge_started(info: Dictionary) -> void:
 	if info.get("fresh", true):
-		toast("%s - the blood is in you." % info["name"], UiStyle.GOLD, 3.0)
+		var effect := player.surge.effect_text(float(info.get("power", 1.0)))
+		toast("%s for %s: %s" % [info["name"], BloodSurge.clock_text(float(info.get("seconds", 0.0))), effect], UiStyle.GOLD, 5.0)
 
 
 func _on_sense_on() -> void:
@@ -414,10 +421,11 @@ func _update_side(delta: float) -> void:
 	_refresh_status()
 	var s := player.surge
 	if s.active:
-		var secs := int(ceil(s.seconds_left))
-		_surge_label.text = "%s  %d:%02d" % [s.surge_name, secs / 60, secs % 60]
+		_surge_label.text = "%s  %s left" % [s.surge_name, BloodSurge.clock_text(s.seconds_left)]
+		_surge_detail.text = s.effect_short()
 	else:
 		_surge_label.text = ""
+		_surge_detail.text = ""
 	var sense := player.abilities.get_ability(&"vampiric_sense")
 	if sense and sense.active:
 		var cost := sense.current_cost_per_sec()

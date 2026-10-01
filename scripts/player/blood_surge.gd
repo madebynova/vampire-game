@@ -65,6 +65,24 @@ func intensity() -> float:
 	return _level
 
 
+## What a surge of `p` power does, in plain words and real numbers (the HUD and the memory screen show it,
+## so a number on screen is never a mystery). Generated from the same tuning the surge applies.
+func effect_text(p: float) -> String:
+	return "+%d%% speed, +%d%% jump, Sense is free, sun burns %d%% slower" % [
+		roundi(speed_bonus * p * 100.0), roundi(jump_bonus * p * 100.0), roundi(sun_relief * minf(p, 1.3) * 100.0)]
+
+
+## The same in few words, for the line under the timer on the HUD.
+func effect_short() -> String:
+	return "Faster, higher jumps, Sense is free, the sun burns slower"
+
+
+## "0:32" style clock for a number of seconds.
+static func clock_text(seconds: float) -> String:
+	var s := int(ceil(maxf(seconds, 0.0)))
+	return "%d:%02d" % [s / 60, s % 60]
+
+
 func _process(delta: float) -> void:
 	if not active:
 		return

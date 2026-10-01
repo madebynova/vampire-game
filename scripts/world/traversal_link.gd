@@ -30,7 +30,7 @@ func setup(p: TraversalPlacement) -> void:
 		var it := TraversalInteractable.new()
 		it.link = self
 		it.end = i
-		it.interact_range = 2.1
+		it.interact_range = p.reach
 		it.position = p.end_position(i) + Vector3(0, 1.1, 0)
 		add_child(it)
 		ends.append(it)
@@ -39,18 +39,22 @@ func setup(p: TraversalPlacement) -> void:
 		node.position = p.end_position(i)
 		add_child(node)
 		# Invisible to the eye; the Sense overlay draws on it.
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(0, 0, 0, 0)
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		var m := MeshInstance3D.new()
 		var sm := SphereMesh.new()
 		sm.radius = 0.24
 		sm.height = 0.48
 		m.mesh = sm
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0, 0, 0, 0)
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		m.material_override = mat
 		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		m.position = Vector3(0, 1.3 if window else 0.9, 0)
 		node.add_child(m)
+		# A climbable wall is drawn by Sense as a pale strip up its face, so you can see WHAT you can scale.
+		var low_end := 0 if p.a.y <= p.b.y else 1
+		if not window and i == low_end and p.show_wall:
+			node.add_child(_wall_strip(low_end, mat))
 		var st := SenseTarget.new()
 		st.kind = &"route"
 		st.max_range = 18.0
@@ -59,6 +63,26 @@ func setup(p: TraversalPlacement) -> void:
 		st.label_offset = Vector3(0, 1.75 if window else 1.4, 0)
 		node.add_child(st)
 		sense_targets.append(st)
+
+
+## The pale strip Sense draws up the wall face of a climb (local to the low end's marker).
+func _wall_strip(low_end: int, mat: Material) -> MeshInstance3D:
+	var low := placement.end_position(low_end)
+	var high := placement.end_position(1 - low_end)
+	var bar := placement.barrier if low_end == 0 else 1.0 - placement.barrier
+	var wall := Vector2(low.x, low.z).lerp(Vector2(high.x, high.z), bar)
+	var rise := absf(high.y - low.y)
+	var dir := (Vector2(high.x, high.z) - Vector2(low.x, low.z))
+	var m := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(0.55, rise, 0.05)
+	m.mesh = bm
+	m.material_override = mat
+	m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	m.position = Vector3(wall.x - low.x, rise * 0.5, wall.y - low.z)
+	if dir.length() > 0.05:
+		m.rotation.y = atan2(dir.x, dir.y)
+	return m
 
 
 ## The other end's feet position.

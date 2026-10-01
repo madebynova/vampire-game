@@ -1,8 +1,9 @@
-[gd_resource type="Resource" script_class="NpcProfile" load_steps=8 format=3]
+[gd_resource type="Resource" script_class="NpcProfile" load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/npc_profile.gd" id="1_prof"]
 [ext_resource type="Script" path="res://scripts/data/blood_memory.gd" id="2_mem"]
 [ext_resource type="Script" path="res://scripts/data/schedule_entry.gd" id="3_sch"]
+[ext_resource type="Script" path="res://scripts/data/tiding.gd" id="4_tid"]
 
 [sub_resource type="Resource" id="mem_calm"]
 script = ExtResource("2_mem")
@@ -26,6 +27,50 @@ condition = &"afraid"
 title = "Nine Sets of Footsteps"
 text = "Terror has no plot, only fragments: boots on flagstone, a lantern swinging, a hood turned toward the window. You count them again and again. Not seven. Nine.\n\nSomeone was counting on Tomas to say seven."
 facts = PackedStringArray("Tomas counted nine figures, not seven.", "Someone wanted a smaller number remembered.")
+
+[sub_resource type="Resource" id="mem_trusting"]
+script = ExtResource("2_mem")
+condition = &"trusting"
+title = "Flour on Her Hands"
+text = "A kitchen at dawn. Flour on a woman's hands, a kettle starting to sing. 'Come away from the window, Tom. Whatever is out there will still be out there after breakfast.'\n\nThe kettle sings for years after she is gone. The night the robed men came you took the iron key from her sewing box and carried it to the well, and buried it there, so that nothing of hers would ever be locked in the dark.\n\nYou walk the grounds with a lamp now, so the dark will not be waiting behind you when you turn around."
+facts = PackedStringArray("Tomas's wife died the winter before the robed visitors came.", "The cellar key was hers before it was his.", "He walks the grounds with a lamp so that he is never alone with the dark.")
+reveals_secret = &"well_key"
+
+[sub_resource type="Resource" id="td_foxes"]
+script = ExtResource("4_tid")
+id = &"foxes"
+text = "Foxes have been at my hens again. They den under the old wall past the well, bold as brass once the lamps are lit. Mind your boots at dusk."
+learned = "Foxes den under the ruined wall past the well, and come out after dark."
+
+[sub_resource type="Resource" id="td_corvin"]
+script = ExtResource("4_tid")
+id = &"corvin"
+text = "That's Corvin Hale who walks the road at night. Sleeps in the watch hut by the gate until mid-afternoon, and I wouldn't wake him for the Lord himself."
+learned = "Corvin Hale, the night watchman, sleeps in the hut by the gate until mid-afternoon, then walks the road all night."
+min_trust = 1
+introduces = &"corvin"
+
+[sub_resource type="Resource" id="td_elise"]
+script = ExtResource("4_tid")
+id = &"elise"
+text = "There's a seamstress holed up in the gatehouse. Elise, her name is. Sits up with a lantern till the moon's high, then sleeps like the dead. Never asked her business, and she never asked mine."
+learned = "Elise Marrow keeps a lantern by the gatehouse until about 11 PM, then sleeps."
+min_trust = 1
+introduces = &"elise"
+
+[sub_resource type="Resource" id="td_names"]
+script = ExtResource("4_tid")
+id = &"names"
+text = "My wife said I talked names in my sleep. Names I'd never heard. Silly, eh? ...Forget I said it."
+learned = "Tomas talks in his sleep. Feed on him while he sleeps and a dream waits in his blood."
+min_trust = 2
+
+[sub_resource type="Resource" id="mem_deep"]
+script = ExtResource("2_mem")
+condition = &"deep"
+title = "A Hand That Was Not His"
+text = "You are writing, and the hand is yours, and the names are not. Each name belongs to someone you have waved to across the yard. The pen does not tremble. Only your wife's chair, empty at the table, rocks a little, as though someone has just risen from it.\n\nThe last name is not finished. 'E. Marr,' says a voice behind you, and you do not turn. 'Her mother will bring her at the new moon.'"
+facts = PackedStringArray("Tomas wrote the names in the ledger without choosing to.", "Someone promised the child would be brought at the new moon.")
 
 [sub_resource type="Resource" id="sch_work"]
 script = ExtResource("3_sch")
@@ -70,8 +115,9 @@ greeting_lines = PackedStringArray("Evening, stranger. Mind the road - it's a lo
 familiar_lines = PackedStringArray("You again. I turn in when the lamps are lit - the cottage past the graves. Early to bed, early to rise.", "Nobody bothers me at night. Sleep like a stone, I do. Wife used to say the house could burn down around me.")
 trust_lines = PackedStringArray("You've an honest face. Come, I'll show you where the shade is good.", "Lead on, then. I'll walk with you a spell.")
 night_lines = PackedStringArray("Lamp's lit, so I'm awake. Just barely. Don't stay out in the damp.")
+tidings = Array[ExtResource("4_tid")]([SubResource("td_foxes"), SubResource("td_corvin"), SubResource("td_elise"), SubResource("td_names")])
 blood_type = &"aged"
 blood_description = "Aged and smoky. Pipe tobacco, cold rain, old habit."
 blood_yield = 45.0
-memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid")])
+memories = Array[ExtResource("2_mem")]([SubResource("mem_calm"), SubResource("mem_asleep"), SubResource("mem_afraid"), SubResource("mem_trusting"), SubResource("mem_deep")])
 schedule = Array[ExtResource("3_sch")]([SubResource("sch_work"), SubResource("sch_evening"), SubResource("sch_sleep")])

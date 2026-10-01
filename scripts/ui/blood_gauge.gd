@@ -3,7 +3,9 @@ extends Control
 ## Blood as something alive, not a mana bar: a vessel of liquid blood with a living surface, a pulse
 ## that follows your real heart rate (slow and heavy as a vampire, faster when hungry, feeding or
 ## burning), a ring for vitality, droplets that fall while Sense is spending it, a golden arc while
-## a Bloodrush lasts. No number. Hunger is a dashed ring (a shape, not only a colour).
+## a Bloodrush lasts. Hunger is a dashed ring (a shape, not only a colour). A plain "73 / 100" sits
+## under the vessel - supplemental, large enough for a TV, and it follows the liquid's own smoothing
+## so it counts up as you drink rather than jumping.
 ## Drawn entirely in `_draw()`; it reads the player, never drives it.
 
 const R := 52.0
@@ -26,7 +28,7 @@ var _drop_timer := 0.0
 
 
 func _init() -> void:
-	custom_minimum_size = Vector2(190, 190)
+	custom_minimum_size = Vector2(190, 222)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
@@ -44,6 +46,16 @@ func vampire_blend() -> float:
 
 func displayed_blood() -> float:
 	return _blood
+
+
+## The whole number shown under the vessel (smoothed, so it counts up while you drink).
+func displayed_amount() -> int:
+	return roundi(_blood * (player.blood.max_blood if player else 100.0))
+
+
+## "73 / 100" - exactly what is drawn.
+func number_text() -> String:
+	return "%d / %d" % [displayed_amount(), roundi(player.blood.max_blood) if player else 100]
 
 
 func _process(delta: float) -> void:
@@ -144,6 +156,29 @@ func _draw() -> void:
 	for d in _drops:
 		draw_circle(Vector2(d["x"], d["y"]), 2.6, Color(liquid.r, liquid.g, liquid.b, clampf(d["life"], 0.0, 1.0)))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_draw_number(liquid)
+
+
+## "73" large and "/ 100" small, centred under the vessel. Turns hot when hungry and flares when you drink.
+func _draw_number(liquid: Color) -> void:
+	var font := UiStyle.serif_bold()
+	var amount := str(displayed_amount())
+	var total := "/ %d" % roundi(player.blood.max_blood)
+	var big := 30
+	var small := 17
+	var wa := font.get_string_size(amount, HORIZONTAL_ALIGNMENT_LEFT, -1, big).x
+	var wt := font.get_string_size(total, HORIZONTAL_ALIGNMENT_LEFT, -1, small).x
+	var gap := 6.0
+	var x := size.x * 0.5 - (wa + gap + wt) * 0.5
+	var y := size.y - 10.0
+	var col := UiStyle.BONE.lerp(Color(1.0, 0.5, 0.42), 1.0 if _hungry else 0.0).lerp(Color(1.0, 0.72, 0.7), _flash * 0.8)
+	if _starving:
+		col.a = 0.6 + 0.4 * (0.5 + 0.5 * sin(_t * 9.0))
+	draw_string_outline(font, Vector2(x, y), amount, HORIZONTAL_ALIGNMENT_LEFT, -1, big, 7, Color(0, 0, 0, 0.9))
+	draw_string(font, Vector2(x, y), amount, HORIZONTAL_ALIGNMENT_LEFT, -1, big, col)
+	var dim := Color(col.r, col.g, col.b, col.a * 0.7)
+	draw_string_outline(font, Vector2(x + wa + gap, y), total, HORIZONTAL_ALIGNMENT_LEFT, -1, small, 5, Color(0, 0, 0, 0.9))
+	draw_string(font, Vector2(x + wa + gap, y), total, HORIZONTAL_ALIGNMENT_LEFT, -1, small, dim)
 
 
 ## Polygon of the liquid in a circle of `radius`, filled to `level`, with a living surface. The surface is

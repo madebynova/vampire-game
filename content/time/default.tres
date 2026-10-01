@@ -1,6 +1,35 @@
-[gd_resource type="Resource" script_class="DayNightProfile" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="DayNightProfile" load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/day_night_profile.gd" id="1_dn"]
+[ext_resource type="Script" path="res://scripts/data/rest_option.gd" id="2_ro"]
+
+[sub_resource type="Resource" id="rest_dusk"]
+script = ExtResource("2_ro")
+id = &"dusk"
+label = "Until dusk"
+hour = 19.0
+wake_text = "You sleep until dusk. The living have forgotten you."
+
+[sub_resource type="Resource" id="rest_midnight"]
+script = ExtResource("2_ro")
+id = &"midnight"
+label = "Until midnight"
+hour = 0.0
+wake_text = "You sleep until midnight. The night is deep, and everything in it is yours."
+
+[sub_resource type="Resource" id="rest_dawn"]
+script = ExtResource("2_ro")
+id = &"dawn"
+label = "Until dawn"
+hour = 5.5
+wake_text = "You sleep until dawn. The sky is pale, and the day will be long."
+
+[sub_resource type="Resource" id="rest_daylight"]
+script = ExtResource("2_ro")
+id = &"daylight"
+label = "Until daylight"
+hour = 8.0
+wake_text = "You sleep until morning. The sun is up, and you wake into it as a human."
 
 [resource]
 script = ExtResource("1_dn")
@@ -16,3 +45,4 @@ ambient_energy = PackedFloat32Array(0.06, 0.06, 0.28, 0.5, 0.58, 0.5, 0.32, 0.16
 fog_density = PackedFloat32Array(0.011, 0.011, 0.008, 0.004, 0.003, 0.004, 0.006, 0.008, 0.011, 0.011)
 moon_energy = PackedFloat32Array(0.34, 0.34, 0.15, 0, 0, 0, 0, 0.15, 0.34, 0.34)
 star_strength = PackedFloat32Array(1, 1, 0.15, 0, 0, 0, 0.0, 0.5, 1, 1)
+rest_options = Array[ExtResource("2_ro")]([SubResource("rest_dusk"), SubResource("rest_midnight"), SubResource("rest_dawn"), SubResource("rest_daylight")])

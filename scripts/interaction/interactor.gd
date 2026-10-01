@@ -43,6 +43,13 @@ func _process(delta: float) -> void:
 		hold_progress = maxf(hold_progress - delta * 4.0 / hold_time, 0.0)
 
 
+## Forget what was in focus and look again at once (after the player is moved somewhere else).
+func reset_focus() -> void:
+	_clear()
+	_scan_timer = 0.0
+	_wait_release = false
+
+
 func _clear() -> void:
 	hold_progress = 0.0
 	if focused != null:
@@ -56,7 +63,7 @@ func _rescan() -> void:
 	var best_score := INF
 	for node in get_tree().get_nodes_in_group(&"interactables"):
 		var it := node as Interactable
-		if it == null or not it.is_available(player):
+		if it == null or not it.is_on_level_with(player):
 			continue
 		var to := it.global_position - player.global_position
 		to.y = 0.0
@@ -65,6 +72,9 @@ func _rescan() -> void:
 			continue
 		var facing := cam_forward.dot(to.normalized()) if dist > 0.05 else 1.0
 		if dist > 1.0 and facing < 0.15:
+			continue
+		# Availability last: some checks (a traversal's landing spot) cost a physics query.
+		if not it.is_available(player):
 			continue
 		var score := dist - facing
 		if score < best_score:

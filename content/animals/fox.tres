@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="AnimalProfile" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/animal_profile.gd" id="1_ap"]
+[ext_resource type="Script" path="res://scripts/data/blood_memory.gd" id="2_mem"]
+
+[sub_resource type="Resource" id="mem_fox"]
+script = ExtResource("2_mem")
+condition = &"calm"
+title = "Under the Boards"
+text = "Cold grass, hen-smell, lamp-smoke. Low to the ground the world is all edges and scents. You slip through a gap beneath the manor's north wall, where the stones sweat and the air tastes of wax and lavender.\n\nSomething warm breathes under the floor, against an iron hatch. You do not go closer. You are a fox, and foxes know."
+facts = PackedStringArray("Something warm breathes beneath the iron hatch in the manor hall.", "Even the foxes will not go near it.")
+
+[resource]
+script = ExtResource("1_ap")
+id = &"fox"
+display_name = "Red fox"
+description = "A fox of the Blackthorn grounds. It dens under the old wall and keeps to the dark between the lamps."
+species = "fox"
+sense_label = "A fox"
+fur_color = Color(0.74, 0.34, 0.1, 1)
+belly_color = Color(0.9, 0.82, 0.7, 1)
+tail_tip_color = Color(0.95, 0.93, 0.88, 1)
+dark_color = Color(0.12, 0.08, 0.06, 1)
+base_heart_rate = 118.0
+nocturnal = true
+walk_speed = 1.6
+flee_speed = 6.4
+notice_vampire = 8.5
+notice_human = 4.0
+roam_radius = 5.5
+away_seconds = 100.0
+blood_type = &"wild"
+blood_description = "Wild and quick. Wet earth, hen-feathers, a thread of smoke."
+blood_yield = 26.0
+feed_seconds = 2.4
+feed_style = &"wild"
+memories = Array[ExtResource("2_mem")]([SubResource("mem_fox")])
