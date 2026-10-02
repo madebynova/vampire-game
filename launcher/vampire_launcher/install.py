@@ -7,7 +7,7 @@ Layout under the launcher home (default %LOCALAPPDATA%\\VampireGame):
     backup\\      the previous game for the few moments an update is swapping in
     downloads\\   packages being downloaded (*.part until complete)
 
-Player settings/saves live in Godot's user-data folder (%APPDATA%\\Godot\\app_userdata\\Vampire),
+Player settings/saves live in the game's user-data folder (%APPDATA%\\VampireGame),
 which this module never touches. That separation is what lets 0.1.0 -> 0.2.0 keep a player's data.
 
 Order of an update (every step can fail without damaging the installed game):

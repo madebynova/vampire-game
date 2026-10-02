@@ -34,8 +34,8 @@ if ((Get-Content export_presets.cfg -Raw) -notmatch [regex]::Escape("application
     Write-Error "export_presets.cfg does not say $quad. Run ./tools/sync_version.ps1, commit, and rebuild."
     exit 1
 }
-if (-not (Test-Path (Join-Path $Build "Vampire.exe"))) {
-    Write-Error "$Build/Vampire.exe not found. Export the game first: ./tools/build_windows.ps1 -Godot <path to Godot 4.8 console exe>"
+if (-not (Test-Path (Join-Path $Build "VampireGame.exe"))) {
+    Write-Error "$Build/VampireGame.exe not found. Export the game first: ./tools/build_windows.ps1 -Godot <path to Godot 4.8 console exe>"
     exit 1
 }
 
@@ -48,6 +48,9 @@ Remove-Item $zip, "$zip.sha256" -ErrorAction SilentlyContinue
 $stage = Join-Path ([IO.Path]::GetTempPath()) ("vg-stage-" + [guid]::NewGuid().ToString("N"))
 Copy-Item $Build $stage -Recurse
 [IO.File]::WriteAllText((Join-Path $stage "VERSION"), "$version`n", (New-Object Text.UTF8Encoding($false)))
+# a short README for players who download the zip by hand (the launcher ignores it)
+$readme = (Get-Content (Join-Path $PSScriptRoot "release_readme.txt") -Raw) -replace '\{\{VERSION\}\}', $version
+[IO.File]::WriteAllText((Join-Path $stage "README.txt"), ($readme -replace "`r?`n", "`r`n"), (New-Object Text.UTF8Encoding($false)))
 
 # .NET's zip writer (not Compress-Archive, which writes backslash paths on Windows PowerShell 5.1)
 Add-Type -AssemblyName System.IO.Compression.FileSystem

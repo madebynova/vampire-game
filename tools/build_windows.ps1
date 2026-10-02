@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Builds a Windows playtest executable of the prototype (build/windows/Vampire.exe).
+  Builds a Windows playtest executable of the prototype (build/windows/VampireGame.exe).
 
 .DESCRIPTION
   Needs the Godot 4.8 editor binary and the matching Windows EXPORT TEMPLATES installed
@@ -14,7 +14,7 @@
 param(
     [string]$Godot = $env:GODOT,
     [string]$Preset = "Windows Desktop (playtest)",
-    [string]$Out = "build/windows/Vampire.exe"
+    [string]$Out = "build/windows/VampireGame.exe"
 )
 
 $ErrorActionPreference = "Stop"

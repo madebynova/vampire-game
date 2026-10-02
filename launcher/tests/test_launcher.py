@@ -79,7 +79,7 @@ class FlowCase(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.home = Path(tmp.name) / "VampireGame"
-        self.userdata = Path(tmp.name) / "AppData" / "Godot" / "app_userdata" / "Vampire"
+        self.userdata = Path(tmp.name) / "AppData" / "VampireGame"
         self.userdata.mkdir(parents=True)
         (self.userdata / "settings.cfg").write_text("master=0.5")
         (self.userdata / "save1.dat").write_text("precious")
@@ -120,7 +120,7 @@ class InstallUpdateTests(FlowCase):
         L = self.launcher()
         L.check_for_updates()
         self.assertEqual(L.install_latest(), "0.1.0")
-        self.assertTrue((L.paths.game / "Vampire.exe").is_file())
+        self.assertTrue((L.paths.game / "VampireGame.exe").is_file())
 
     def test_progress_is_reported(self):
         self.gh.add_release("0.1.0")
@@ -149,7 +149,7 @@ class InstallUpdateTests(FlowCase):
         L.set_install_root(str(custom))
         L.check_for_updates()
         L.install_latest()
-        self.assertTrue((custom / "game" / "Vampire.exe").is_file())
+        self.assertTrue((custom / "game" / "VampireGame.exe").is_file())
         self.assertEqual(self.launcher().installed_version(), "0.1.0")     # remembered across launches
         with self.assertRaises(InstallError):
             L.set_install_root(str(self.home))

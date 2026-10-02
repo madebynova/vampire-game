@@ -30,7 +30,7 @@ Three things get published, in three different ways:
                                                   │   "New update available" → player presses UPDATE
                                     7. downloads the zip to a temporary folder
                                     8. checks size + SHA-256 + unpacks to a staging folder
-                                    9. checks the package really is 0.2.0 and contains Vampire.exe
+                                    9. checks the package really is 0.2.0 and contains VampireGame.exe
                                    10. refuses if the game is running
                                    11. swaps the folders; the old game is kept until the swap succeeds
                                    12. records 0.2.0  →  player presses PLAY
@@ -55,25 +55,28 @@ The player's **settings and saves are never touched**, see "Saves" below.
 
 ## Publishing the first Windows release (0.1.0)
 
-Prerequisite **(your step)**: Godot 4.8 with the matching **export templates** installed (see the README, "Windows
-playtest build"). The development machine used so far has none, so no `Vampire.exe` has ever been built.
+Prerequisite: Godot 4.8 with the matching **export templates** (see the README, "Windows build"). They are installed on the
+development machine and the build has been exported and run for real; on a new machine install them once first.
 
 ```powershell
-# 1. make the .exe version match VERSION, commit the result
-./tools/sync_version.ps1                       # (tested)
-git add export_presets.cfg; git commit -m "Set version 0.1.0"
+# 1. make the .exe/project version match VERSION, commit the result
+./tools/sync_version.ps1
+git add export_presets.cfg project.godot; git commit -m "Set version 0.1.0"
 
-# 2. export the game  ->  build/windows/Vampire.exe
-./tools/build_windows.ps1 -Godot "C:\Godot\Godot_v4.8-..._console.exe"
+# 2. export the game  ->  build/windows/VampireGame.exe   (run from a clean, committed tree so the build matches a commit)
+./tools/build_windows.ps1 -Godot "C:\Godot\Godot_v4.8-dev6_win64_console.exe"
 
-# 3. package it  ->  dist/VampireGame-Windows-v0.1.0.zip  +  .zip.sha256
-./tools/package_release.ps1                    # (tested with a stand-in build)
+# 3. (recommended, ~15 min) run all test suites inside an exported build
+./tools/test_exported_build.ps1 -Godot "C:\Godot\Godot_v4.8-dev6_win64_console.exe"
 
-# 4. publish it as a GitHub Release (needs the gh CLI, logged in)
-./tools/package_release.ps1 -Publish -NotesFile release-notes.md
+# 4. package it  ->  dist/VampireGame-Windows-v0.1.0.zip  +  .zip.sha256
+./tools/package_release.ps1
+
+# 5. publish it as a GitHub Release (needs the gh CLI, logged in); the notes live in docs/release_notes/
+./tools/package_release.ps1 -Publish -NotesFile docs/release_notes/v0.1.0.md
 ```
 
-Step 4 can also be done by hand: GitHub → *Releases* → *Draft a new release* → tag `v0.1.0` (create on publish) →
+Step 5 can also be done by hand: GitHub → *Releases* → *Draft a new release* → tag `v0.1.0` (create on publish) →
 attach **both** files from `dist/` → publish. Rules the launcher relies on:
 
 - the tag must be exactly `v` + the version (`v0.1.0`);
@@ -89,9 +92,9 @@ Zips and `.exe` files are git-ignored (`dist/`, `*.zip`, `*.exe`): **never commi
 `VampireGame-Windows-v0.1.0.zip` has the game at the zip root (a single top-level folder also works):
 
 ```
-Vampire.exe          (the Godot export; the .pck is embedded, see export_presets.cfg)
-Vampire.console.exe  (optional, from the export preset)
-VERSION              ("0.1.0", added by package_release.ps1; the launcher checks it matches the release)
+VampireGame.exe      the Godot export (the game data is embedded in it, see export_presets.cfg)
+VERSION              "0.1.0", added by package_release.ps1; the launcher checks it matches the release
+README.txt           a short note for players who download the zip by hand (how to run, SmartScreen, settings)
 ```
 
 ## Publishing the launcher
@@ -125,28 +128,27 @@ The launcher only ever replaces **one folder**: the `game\` folder of its instal
 
 ```
 %LOCALAPPDATA%\VampireGame\          launcher install root (changeable before the first install)
-    game\                            REPLACED on every update: Vampire.exe, VERSION, …
+    game\                            REPLACED on every update: VampireGame.exe, VERSION, …
     launcher.json, release_cache.json   launcher's own tiny files, kept
 
-%APPDATA%\Godot\app_userdata\Vampire\   the game's user data. NEVER touched by the launcher
+%APPDATA%\VampireGame\   the game's user data. NEVER touched by the launcher
     settings.cfg                     the game's options today
     mods\                            user mods
     (saves will live here too)
 ```
 
-Godot's `user://` folder is that second location, named after the project (`config/name="Vampire"`). Today the game
-stores only `settings.cfg` (the README says "no save games" yet). **Rule for the game from now on:** write anything the
-player should keep to `user://`, never next to the `.exe`. A test in the launcher suite (`test_install_then_update_keeps_saves`)
-installs 0.1.0, updates to 0.2.0 and proves a fake save and settings file survive.
-
-Optional hardening for later: set Godot's `application/config/use_custom_user_dir` with a folder name such as
-`VampireGame`, so saves live in a stable, project-independent folder even if the project is renamed.
+Godot's `user://` folder is that second location. `project.godot` sets `config/use_custom_user_dir=true` and
+`config/custom_user_dir_name="VampireGame"`, so it is `%APPDATA%\VampireGame\` regardless of the project's name or where
+the game is installed. Verified with the real exported exe: it wrote `settings.cfg`, `logs\` and a `shader_cache\` there and
+nothing beside the exe. Today the game stores only `settings.cfg` and mods (there are no save games yet). **Rule for the game
+from now on:** write anything the player should keep to `user://`, never next to the `.exe`. A test in the launcher suite
+(`test_install_then_update_keeps_saves`) installs 0.1.0, updates to 0.2.0 and proves a fake save and settings file survive.
 
 ## What the launcher checks (and what it doesn't)
 
 Done and tested: only game releases (`vX.Y.Z`) from `madebynova/vampire-game`; download URLs must be that repo's release
 assets; temporary download that is renamed only when complete; size and **SHA-256** must match; unpacking is "zip-slip"
-safe (no path escapes, no links, size caps); the package must contain `Vampire.exe` and a `VERSION` equal to the release;
+safe (no path escapes, no links, size caps); the package must contain `VampireGame.exe` and a `VERSION` equal to the release;
 refuses while the game is running; the old game is restored if the swap fails; leftovers from a crash are cleaned up
 at the next start.
 

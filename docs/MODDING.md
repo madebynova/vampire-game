@@ -20,7 +20,7 @@ user://mods/<mod>/content/ mod content        (loaded after; same type + same id
 user://mods/<mod>/mod.cfg  optional manifest  (name, version, author, description)
 ```
 
-`user://` on Windows is `%APPDATA%\Godot\app_userdata\<project name>\`.
+`user://` on Windows is `%APPDATA%\VampireGame\` (the project sets a custom user-data folder name, so it does not depend on the project name or the install folder).
 
 ## 2. What is data-driven today
 

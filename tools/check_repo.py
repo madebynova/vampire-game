@@ -1,7 +1,7 @@
 """Repository sanity checks that don't need Godot. Run from anywhere:  python tools/check_repo.py
 
   * VERSION and launcher/VERSION are valid MAJOR.MINOR.PATCH
-  * export_presets.cfg carries the same version as VERSION (run tools/sync_version.ps1 if not)
+  * export_presets.cfg and project.godot carry the same version as VERSION (run tools/sync_version.ps1 if not)
   * no Supabase service_role / secret keys, private keys or tokens anywhere in the repository
   * website/assets/js/config.js holds only public values
 """
@@ -32,6 +32,11 @@ for key in ("file_version", "product_version"):
     if not m or m.group(1) != f"{game}.0":
         problems.append(f"export_presets.cfg application/{key} is {m.group(1) if m else 'missing'}, expected {game}.0 "
                         f"(run tools/sync_version.ps1)")
+
+proj = (ROOT / "project.godot").read_text(encoding="utf-8")
+m = re.search(r'^config/version="([^"]*)"', proj, re.M)
+if not m or m.group(1) != game:
+    problems.append(f"project.godot config/version is {m.group(1) if m else 'missing'}, expected {game} (run tools/sync_version.ps1)")
 
 # ---- secrets ---------------------------------------------------------------------------------
 JWT = re.compile(r"eyJ[A-Za-z0-9_-]{8,}\.([A-Za-z0-9_-]{8,})\.[A-Za-z0-9_-]{8,}")

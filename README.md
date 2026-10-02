@@ -102,19 +102,27 @@ lineage, a large world, save games, final art/UI/audio, multiplayer, a mod manag
 3. Press **F5**. The game opens on a title screen; **Play** starts in the coffin room as a Human. (**F6**
    on `scenes/main.tscn` skips the title.) Your settings are saved to `user://settings.cfg`.
 
-## Windows playtest build
-Exporting needs the Godot editor plus the matching **export templates**. The project is export-ready
-(`export_presets.cfg` has a "Windows Desktop (playtest)" preset that excludes tests, docs and examples).
+## Windows build
+The project exports to a single `VampireGame.exe` (Windows 10/11, 64-bit; the data is embedded in the exe).
+`export_presets.cfg` has two presets: **"Windows Desktop (playtest)"** (the release: no tests, docs, website or launcher) and
+**"Windows Desktop (self-test)"** (the same game plus the test scenes, used only by the test script below).
 
-1. In the Godot editor: *Editor -> Manage Export Templates -> Download and Install* (the templates folder
-   for 4.8-dev6 is `%APPDATA%\Godot\export_templates\4.8.dev6\`).
-2. Run `./tools/build_windows.ps1 -Godot "<path to your Godot 4.8 console exe>"`. It checks for the templates
-   first and tells you exactly what is missing; on success it writes `build/windows/Vampire.exe`
-   (git-ignored - publish binaries as GitHub Releases, not in the repository).
+1. Install the matching **export templates** once: Godot editor -> *Editor -> Manage Export Templates -> Download and Install*
+   (for 4.8-dev6 they go to `%APPDATA%\Godot\export_templates\4.8.dev6\`).
+2. `./tools/build_windows.ps1 -Godot "<path to your Godot 4.8 console exe>"` writes `build/windows/VampireGame.exe`
+   (git-ignored; binaries are published as GitHub Releases, never committed). It checks the templates first and says what is missing.
+3. `./tools/test_exported_build.ps1 -Godot "<same exe>"` runs all five test suites (about 840 checks) **inside an exported
+   build** instead of the editor (about 15 minutes). It works on a temporary copy of the project and an isolated `%APPDATA%`.
+   One known limitation: 4 example-mod checks cannot run in an export (the test copies `res://` files) and are skipped explicitly.
+4. `./tools/package_release.ps1` makes `dist/VampireGame-Windows-v<VERSION>.zip` + `.sha256`; see [`docs/RELEASING.md`](docs/RELEASING.md).
 
-**Status:** the development machine has **no export templates installed**, so no build was produced in this
-pass (the script reports the missing `windows_release_x86_64.exe` / `windows_debug_x86_64.exe`). Nothing was
-faked; see the notes for the state of the preset.
+**Where the game stores things:** settings (and, later, saves) go to `%APPDATA%\VampireGame\` (the project sets
+`config/use_custom_user_dir`), never next to the exe, so the game folder can be replaced or updated without touching them.
+**Version:** the `VERSION` file is the single source; `./tools/sync_version.ps1` copies it into `export_presets.cfg` (the exe's file
+version) and `project.godot` (`config/version`), and `python tools/check_repo.py` fails if they disagree.
+
+**Status:** build, self-test and a hands-on run of the real exe (title, play, move, transform, Sense, pause, options, fullscreen,
+clean exit; D3D12 on an NVIDIA GTX 1660 SUPER, ~220 FPS) were done on one machine. Controllers have not been tried on hardware.
 
 ## Playtest ecosystem (website -> play -> feedback -> launcher -> updates)
 Beyond the game itself, this repository holds the pieces that turn it into something people can try:
@@ -242,7 +250,7 @@ VERSION     the game's version (single source of truth for releases)
 ## Limitations
 Greybox environment, placeholder procedural audio (no music), no navmesh (NPC pathing is simple), one small
 location, three people and two foxes, no save games, traversal is authored routes (not free climbing), the controllers are
-untested on hardware, and there is no built executable yet. Details in the notes.
+untested on hardware, no code signing (Windows SmartScreen will warn), and no browser build yet. Details in the notes.
 
 ## License
 No license has been chosen yet; until one is added, all rights are reserved by the author.

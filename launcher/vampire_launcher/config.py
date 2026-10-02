@@ -15,9 +15,9 @@ API_BASE = os.environ.get("VAMPIRE_API_BASE", "https://api.github.com")
 # ignored here, so the two can share one repository without confusing each other.
 GAME_TAG_RE = re.compile(r"^v(\d+\.\d+\.\d+)$")
 
-GAME_EXE = "Vampire.exe"          # what the Godot export preset writes (export_presets.cfg)
+GAME_EXE = "VampireGame.exe"          # what the Godot export preset writes (export_presets.cfg)
 VERSION_FILE = "VERSION"          # written into the package root by tools/package_release.ps1
-GAME_PROCESS_NAMES = ("Vampire.exe", "Vampire.console.exe")
+GAME_PROCESS_NAMES = ("VampireGame.exe", "VampireGame.console.exe")
 
 
 def package_name(version: str) -> str:
@@ -36,7 +36,7 @@ def trusted_download_prefix(repo: str = REPO) -> str:
 def default_home() -> Path:
     """Where the launcher keeps its own files and the installed game.
 
-    Deliberately NOT the Godot user-data folder (%APPDATA%\\Godot\\app_userdata\\Vampire), which is
+    Deliberately NOT the game's user-data folder (%APPDATA%\\VampireGame), which is
     where the game keeps settings and, later, saves. The launcher never reads or writes that folder.
     """
     override = os.environ.get("VAMPIRE_LAUNCHER_HOME")

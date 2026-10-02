@@ -81,7 +81,7 @@ before publishing it. Publishing steps: [`docs/RELEASING.md`](../docs/RELEASING.
 | `%LOCALAPPDATA%\VampireGame\game\` | the installed game | **yes**, whole folder |
 | `%LOCALAPPDATA%\VampireGame\launcher.json` | launcher settings (install folder, allow pre-releases) | no |
 | `%LOCALAPPDATA%\VampireGame\release_cache.json` | last seen release (for offline) | refreshed |
-| `%APPDATA%\Godot\app_userdata\Vampire\` | **the game's settings and saves** | **never touched** |
+| `%APPDATA%\VampireGame\` | **the game's settings and saves** | **never touched** |
 
 The installed version is read from `game\VERSION`, so the game folder is its own record and can't disagree with a
 separate database. The install folder can be changed (CHANGE… button) only before the first install.
@@ -94,9 +94,9 @@ separate database. The install folder can be changed (CHANGE… button) only bef
 2. **Compare** with `game\VERSION` → one of the four states above.
 3. **Download** the checksum, then the zip to `downloads\*.part`; renamed only if the size matches.
 4. **Verify** SHA-256. Mismatch → the file is deleted and nothing changes.
-5. **Unpack** into `staging\` (rejecting path escapes, links, absurd sizes); verify `Vampire.exe` exists and `VERSION`
+5. **Unpack** into `staging\` (rejecting path escapes, links, absurd sizes); verify `VampireGame.exe` exists and `VERSION`
    equals the release.
-6. **Refuse** if `Vampire.exe` is running.
+6. **Refuse** if `VampireGame.exe` is running.
 7. **Swap:** `game\` → `backup\`, `staging` → `game\`; if the second move fails the first is undone. Then `backup\` is removed.
 8. **Recover:** at start-up, leftovers from a crash are removed and a missing `game\` is restored from `backup\`.
 

@@ -14,7 +14,7 @@ def make_package(version, *, exe=b"MZ-fake-exe", version_text=None, extra=None, 
     buf = io.BytesIO()
     prefix = f"{top_folder}/" if top_folder else ""
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr(prefix + "Vampire.exe", exe + version.encode())
+        z.writestr(prefix + "VampireGame.exe", exe + version.encode())
         z.writestr(prefix + "VERSION", (version if version_text is None else version_text) + "\n")
         z.writestr(prefix + "data/readme.txt", f"game {version}")
         for name, data in (extra or {}).items():
