@@ -36,6 +36,8 @@ extends ContentDef
 @export var regen_per_sec := 0.0
 ## Blood spent per point of health regenerated.
 @export var regen_blood_cost := 0.0
+## Damage of this form's basic strike (Rend). 0 = this form cannot fight.
+@export var strike_damage := 0.0
 
 @export_group("Look")
 @export var skin_color := Color(0.85, 0.66, 0.55)

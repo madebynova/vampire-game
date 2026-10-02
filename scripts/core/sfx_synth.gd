@@ -302,3 +302,173 @@ static func ui_back() -> PackedFloat32Array:
 		var t := float(i) / RATE
 		b[i] = sin(TAU * lerpf(400.0, 250.0, t / 0.12) * t) * sin(PI * t / 0.12) * 0.2
 	return b
+
+
+# ---------------------------------------------------------------- the hunt (v0.2.0)
+
+## A boot on packed earth: a short low thud with a dry scuff.
+static func step_boot() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.16)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (_noise() - lp) * 0.3
+		b[i] = sin(TAU * (95.0 - 40.0 * t) * t) * exp(-t * 38.0) * 0.7 + lp * exp(-t * 55.0) * 0.5
+	return b
+
+
+## A tiny iron tick as a lantern swings on its ring.
+static func lantern_clink() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.35)
+	for i in b.size():
+		var t := float(i) / RATE
+		var s := 0.0
+		for p in [[2100.0, 1.0], [3150.0, 0.5], [4400.0, 0.25]]:
+			s += sin(TAU * p[0] * t) * exp(-t * 22.0) * p[1] * 0.12
+		b[i] = s * clampf(t * 400.0, 0.0, 1.0)
+	return b
+
+
+## "Hm?": a short, low, questioning two-note hum.
+static func hunter_notice() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.5)
+	var ph := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var f := 150.0 if t < 0.2 else lerpf(150.0, 215.0, (t - 0.2) / 0.3)
+		ph += TAU * f * (1.0 + 0.02 * sin(TAU * 6.0 * t)) / RATE
+		var env := sin(PI * minf(t / 0.5, 1.0)) * 0.9
+		b[i] = (sin(ph) * 0.5 + sin(ph * 2.0) * 0.18 + sin(ph * 3.0) * 0.08) * env * 0.75
+	return b
+
+
+## Seen: a hard stab (a tritone swelling) over a low hit. The sound of the night turning on you.
+static func hunter_spot() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.95)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var swell := pow(clampf(t / 0.16, 0.0, 1.0), 2.0) * exp(-maxf(t - 0.16, 0.0) * 3.4)
+		var s := (sin(TAU * 466.0 * t) + sin(TAU * 659.0 * t) * 0.8 + sin(TAU * 932.0 * t) * 0.3) * swell * 0.2
+		s += sin(TAU * (58.0 + 90.0 * exp(-t * 20.0)) * t) * exp(-t * 7.0) * 0.8
+		lp += (_noise() - lp) * 0.4
+		s += lp * exp(-t * 26.0) * 0.5
+		b[i] = s * 0.9
+	return b
+
+
+## A blade drawn and raised: steel scraping up through the air, a thin ring at the top.
+static func hunter_windup() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.6)
+	var lp := 0.0
+	var ph := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var k := t / 0.6
+		var n := _noise()
+		lp += (n - lp) * 0.12
+		var hiss := (n - lp) * pow(k, 1.4) * 0.4
+		ph += TAU * (800.0 + 3000.0 * k) / RATE
+		var ring := sin(ph) * pow(k, 2.0) * 0.12 * (1.0 if t < 0.56 else (0.6 - t) / 0.04)
+		b[i] = (hiss + ring) * 1.55
+	return b
+
+
+## The blade coming down: a hard whoosh.
+static func hunter_swing() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.3)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var k := t / 0.3
+		lp += (_noise() - lp) * lerpf(0.5, 0.06, k)
+		var env := sin(PI * minf(k * 1.4, 1.0)) * (1.0 - k * 0.5)
+		b[i] = lp * env * 1.1 + sin(TAU * (180.0 - 90.0 * k) * t) * env * 0.12
+	return b
+
+
+## A grunt: a low voiced burst with a breath behind it.
+static func hunter_hurt() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.32)
+	var lp := 0.0
+	var ph := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (_noise() - lp) * 0.2
+		ph += TAU * (125.0 - 45.0 * t) / RATE
+		var saw := fposmod(ph / TAU, 1.0) * 2.0 - 1.0
+		var env := clampf(t / 0.03, 0.0, 1.0) * exp(-t * 9.0)
+		b[i] = (saw * 0.3 + lp * 0.35) * env * 1.8
+	return b
+
+
+## Down: steel ringing out on stone, then a body.
+static func hunter_down() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(1.1)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var s := 0.0
+		for hit in [[0.0, 1.0], [0.11, 0.5], [0.21, 0.28]]:
+			var tt: float = t - hit[0]
+			if tt >= 0.0:
+				s += (sin(TAU * 1320.0 * tt) + sin(TAU * 1980.0 * tt) * 0.6 + sin(TAU * 3100.0 * tt) * 0.3) * exp(-tt * 14.0) * hit[1] * 0.14
+		var tb := t - 0.16
+		if tb >= 0.0:
+			lp += (_noise() - lp) * 0.2
+			s += sin(TAU * (60.0 - 20.0 * tb) * tb) * exp(-tb * 8.0) * 0.8 + lp * exp(-tb * 18.0) * 0.4
+		b[i] = s
+	return b
+
+
+## Rend: claws through the air.
+static func rend_swing() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.24)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		var k := t / 0.24
+		var n := _noise()
+		lp += (n - lp) * 0.25
+		var env := sin(PI * k) * (1.0 - 0.3 * k)
+		b[i] = ((n - lp) * 0.45 + sin(TAU * lerpf(380.0, 980.0, k) * t) * 0.06) * env
+	return b
+
+
+## Rend, landing: flesh torn, a thump behind it, a bright edge.
+static func rend_hit() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.38)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (_noise() - lp) * 0.3
+		var s := lp * exp(-t * 15.0) * 0.8
+		s += sin(TAU * (120.0 - 60.0 * t) * t) * exp(-t * 14.0) * 0.8
+		s += sin(TAU * 1800.0 * t) * exp(-t * 32.0) * 0.16
+		b[i] = s * 0.95
+	return b
+
+
+## You are struck: the breath knocked out, a deep thump, steel ringing.
+static func hit_taken() -> PackedFloat32Array:
+	_seed()
+	var b := _buf(0.5)
+	var lp := 0.0
+	for i in b.size():
+		var t := float(i) / RATE
+		lp += (_noise() - lp) * 0.22
+		var s := sin(TAU * (55.0 + 40.0 * exp(-t * 20.0)) * t) * exp(-t * 9.0) * 0.95
+		s += lp * exp(-t * 13.0) * 0.5
+		s += (sin(TAU * 1250.0 * t) + sin(TAU * 1870.0 * t) * 0.5) * exp(-t * 9.0) * 0.09
+		b[i] = s
+	return b

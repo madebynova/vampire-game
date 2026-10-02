@@ -49,6 +49,13 @@ var _gain_tween: Tween
 var _gain_total := 0.0
 var _gain_hide := 0.0
 var _sense_hint_shown := false
+var _obj_box: VBoxContainer
+var _obj_title: Label
+var _obj_text: Label
+var _obj_clue: Label
+var _obj_tween: Tween
+var _combat: CombatHud
+var _chip_rend: HBoxContainer
 
 
 func _ready() -> void:
@@ -225,6 +232,7 @@ func _build() -> void:
 	_chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chips.modulate.a = 0.78
 	_root.add_child(_chips)
+	_chip_rend = _chip(&"attack", "Rend")
 	_chip_sense = _chip(&"vampiric_sense", "Vampiric Sense")
 	_chip_sense_label = _chip_sense.get_child(1)
 	_chip_transform = _chip(&"transform", "Become a vampire")
@@ -232,6 +240,31 @@ func _build() -> void:
 	_chip_transform_label = _chip_transform.get_child(1)
 	var chip_help := _chip(&"toggle_help", "Controls")
 	chip_help.modulate.a = 0.75
+
+	# Top-left: the hunt, in a few quiet lines (no quest log).
+	_obj_box = VBoxContainer.new()
+	_obj_box.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_obj_box.offset_left = 26
+	_obj_box.offset_top = 20
+	_obj_box.offset_right = 470
+	_obj_box.add_theme_constant_override(&"separation", 3)
+	_obj_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_obj_box.visible = false
+	_root.add_child(_obj_box)
+	_obj_title = UiStyle.label("THE HUNT", 13, UiStyle.BLOOD_BRIGHT, false, 4)
+	_obj_box.add_child(_obj_title)
+	_obj_text = UiStyle.label("", 18, UiStyle.BONE, true, 5)
+	_obj_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_obj_text.custom_minimum_size = Vector2(420, 0)
+	_obj_box.add_child(_obj_text)
+	_obj_clue = UiStyle.label("", 14, UiStyle.GOLD, false, 4)
+	_obj_clue.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_obj_clue.custom_minimum_size = Vector2(420, 0)
+	_obj_box.add_child(_obj_clue)
+
+	# Over the centre dot: the strike ring, hit marks and where a blow came from.
+	_combat = CombatHud.new()
+	_root.add_child(_combat)
 
 	# The controls screen, on the right.
 	_help = ControlsPanel.new()
@@ -295,6 +328,8 @@ func bind(p: Player) -> void:
 	p.blood.gained.connect(_on_blood_gained)
 	p.surge.started.connect(_on_surge_started)
 	p.health.died.connect(_on_died)
+	_combat.bind(p)
+	p.combat.hurt.connect(func(_i, amount: float): _wounded_hint(amount))
 	p.sunlight.stage_changed.connect(_on_stage_changed)
 	var sense := p.abilities.get_ability(&"vampiric_sense")
 	if sense:
@@ -310,6 +345,7 @@ func _on_form_changed(old: FormData, f: FormData) -> void:
 	_tagline.text = f.tagline
 	_help.refresh_form(f)
 	_chip_sense.visible = f.can_feed
+	_chip_rend.visible = f.strike_damage > 0.0
 	_chip_transform_label.text = "Human form" if f.can_feed else "Become a vampire"
 	_refresh_status()
 	if old != null:
@@ -328,10 +364,11 @@ func _on_form_changed(old: FormData, f: FormData) -> void:
 func _refresh_status() -> void:
 	if player == null:
 		return
+	var wound := "" if player.health.value >= player.health.max_health * 0.995 else "WOUNDED %d" % roundi(player.health.value)
 	if player.blood.is_hungry():
-		_status_label.text = "STARVING" if player.blood.is_starving() else "HUNGRY"
+		_status_label.text = ("STARVING" if player.blood.is_starving() else "HUNGRY") + (("   " + wound) if wound != "" else "")
 	else:
-		_status_label.text = ""
+		_status_label.text = wound
 
 
 func _on_feed_started(_npc: FeedSource) -> void:
@@ -350,7 +387,7 @@ func _on_blood_gained(amount: float) -> void:
 
 func _on_surge_started(info: Dictionary) -> void:
 	if info.get("fresh", true):
-		var effect := player.surge.effect_text(float(info.get("power", 1.0)))
+		var effect := "%s, %s" % [player.surge.effect_text(float(info.get("power", 1.0))), player.surge.strike_text(float(info.get("power", 1.0)))]
 		toast("%s for %s: %s" % [info["name"], BloodSurge.clock_text(float(info.get("seconds", 0.0))), effect], UiStyle.GOLD, 5.0)
 
 
@@ -372,9 +409,13 @@ func _on_stage_changed(stage: int, old: int) -> void:
 		toast("CRITICAL exposure. Get out of the light or you will die.", Color(1.0, 0.2, 0.15), 4.0)
 
 
-func _on_died(_cause: StringName) -> void:
-	_banner.text = "THE SUN TOOK YOU"
-	_banner.add_theme_color_override(&"font_color", Color(1.0, 0.7, 0.4))
+func _on_died(cause: StringName) -> void:
+	if cause == &"hunter":
+		_banner.text = "THE HUNTER GOT YOU"
+		_banner.add_theme_color_override(&"font_color", Color(0.95, 0.25, 0.2))
+	else:
+		_banner.text = "THE SUN TOOK YOU"
+		_banner.add_theme_color_override(&"font_color", Color(1.0, 0.7, 0.4))
 	_banner.modulate.a = 1.0
 	var tw := create_tween()
 	tw.tween_interval(1.6)
@@ -385,6 +426,42 @@ func _on_died(_cause: StringName) -> void:
 ## Hide the whole HUD (a Blood Memory owns the screen).
 func set_dimmed(dimmed: bool) -> void:
 	_root.visible = not dimmed
+
+
+## The hunt's line under the corner of the screen: what to be thinking, and the latest thing you have learned.
+## It brightens when it changes and sits back afterwards. Empty text hides it.
+func set_objective(title: String, text: String, clue := "", known := 0, total := 0) -> void:
+	_obj_title.text = title if total <= 0 else "%s   -   %d of %d leads" % [title, known, total]
+	_obj_text.text = text
+	_obj_clue.text = ("Learned: " + clue) if clue != "" else ""
+	_obj_clue.visible = clue != ""
+	_obj_box.visible = text != ""
+	if _obj_tween:
+		_obj_tween.kill()
+	_obj_box.modulate.a = 1.0
+	_obj_tween = create_tween()
+	_obj_tween.tween_interval(9.0)
+	_obj_tween.tween_property(_obj_box, "modulate:a", 0.6, 2.0)
+
+
+## What the line currently says (tests, accessibility).
+func objective_summary() -> String:
+	return "%s
+%s
+%s" % [_obj_title.text, _obj_text.text, _obj_clue.text]
+
+
+func objective_visible() -> bool:
+	return _obj_box.visible
+
+
+## A short word when the blood has taken a beating (the ring and the red edges do the rest).
+func _wounded_hint(_amount: float) -> void:
+	if player == null or player.state.is_dead():
+		return
+	var frac := player.health.value / player.health.max_health
+	if frac < 0.3:
+		toast("Badly wounded. Feed, or find the dark - your body mends on blood.", Color(1.0, 0.45, 0.4), 3.0)
 
 
 func toast(text: String, color := Color.WHITE, seconds := 3.0) -> void:

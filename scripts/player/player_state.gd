@@ -3,7 +3,8 @@ extends PlayerComponent
 ## High-level "what is the player doing" mode. Gates movement, interaction and abilities.
 
 ## TRAVERSING: sliding through a window / up a ledge. MEMORY: lost in a Blood Memory (world frozen).
-enum Mode { NORMAL, TRANSFORMING, FEEDING, RESTING, DEAD, TRAVERSING, MEMORY }
+## STAGGERED: struck, and thrown back for a moment (see PlayerCombat).
+enum Mode { NORMAL, TRANSFORMING, FEEDING, RESTING, DEAD, TRAVERSING, MEMORY, STAGGERED }
 
 signal mode_changed(old_mode: Mode, new_mode: Mode)
 

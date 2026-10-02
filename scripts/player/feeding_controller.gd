@@ -158,7 +158,7 @@ func _complete() -> void:
 	if result["reveals"] != &"":
 		get_tree().call_group(&"secrets", &"reveal", result["reveals"])
 	# The reward that is not a number: Bloodrush. Say what it does, so the screen is never a puzzle.
-	result["surge_effect"] = player.surge.effect_text(float(result["surge_power"]))
+	result["surge_effect"] = "%s, %s" % [player.surge.effect_text(float(result["surge_power"])), player.surge.strike_text(float(result["surge_power"]))]
 	player.surge.start(float(result["surge_power"]), float(result["surge_seconds"]), String(result["surge_name"]))
 	result["witnesses"] = witness_count
 	result["style"] = st
@@ -172,6 +172,12 @@ func _interrupt() -> void:
 	_end()
 	player.state.set_mode(PlayerState.Mode.NORMAL)
 	feed_interrupted.emit(npc, p)
+
+
+## Torn away from the victim (a blow lands mid-feed): same as letting go, but not the player's doing.
+func break_off() -> void:
+	if target != null:
+		_interrupt()
 
 
 ## Player died mid-feed: clean up without touching state (it is already DEAD).

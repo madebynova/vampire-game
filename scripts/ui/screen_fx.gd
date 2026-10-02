@@ -12,6 +12,8 @@ var vamp_target := 0.0       ## persistent "you are a vampire" rim
 var hunger_target := 0.0
 var surge_target := 0.0
 var pulse_strength_target := 0.0
+## 0..1: how badly hurt the body is; a red edge that stays until the wounds close.
+var wound_target := 0.0
 var fade := 0.0
 
 var memory_tint := Color(0.95, 0.72, 0.42)
@@ -35,6 +37,7 @@ var _surge := 0.0
 var _pulse_strength := 0.0
 var _memory_dim := 0.0
 var _hurt := 0.0
+var _wound := 0.0
 var _flash := 0.0
 var _flash_decay := 3.0
 var _pulse := 0.0
@@ -66,6 +69,7 @@ func _process(delta: float) -> void:
 	_surge = lerpf(_surge, surge_target, 1.0 - exp(-3.0 * delta))
 	_pulse_strength = lerpf(_pulse_strength, pulse_strength_target, 1.0 - exp(-2.0 * delta))
 	_hurt = maxf(_hurt - delta * 1.8, 0.0)
+	_wound = lerpf(_wound, wound_target, 1.0 - exp(-3.0 * delta))
 	_flash = maxf(_flash - delta * _flash_decay, 0.0)
 	_pulse = maxf(_pulse - delta * 3.2, 0.0)
 	var size := get_viewport().get_visible_rect().size
@@ -86,7 +90,7 @@ func _process(delta: float) -> void:
 	_mat.set_shader_parameter(&"surge", _surge)
 	_mat.set_shader_parameter(&"pulse_env", _pulse)
 	_mat.set_shader_parameter(&"pulse_strength", _pulse_strength)
-	_mat.set_shader_parameter(&"hurt_strength", _hurt)
+	_mat.set_shader_parameter(&"hurt_strength", maxf(_hurt, _wound * 0.4))
 	_mat.set_shader_parameter(&"flash_strength", _flash)
 	_mat.set_shader_parameter(&"fade", fade)
 	_mat.set_shader_parameter(&"aspect", size.x / maxf(size.y, 1.0))
@@ -129,4 +133,6 @@ func level(cue: StringName) -> float:
 		&"feed": return _feed
 		&"flash": return _flash
 		&"dim": return _memory_dim
+		&"wound": return _wound
+		&"hurt": return _hurt
 	return 0.0

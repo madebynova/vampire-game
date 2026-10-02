@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="LocationData" load_steps=25 format=3]
+[gd_resource type="Resource" script_class="LocationData" load_steps=27 format=3]
 
 [ext_resource type="Script" path="res://scripts/data/location_data.gd" id="1_loc"]
 [ext_resource type="Script" path="res://scripts/data/npc_placement.gd" id="2_np"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/data/traversal_placement.gd" id="4_tr"]
 [ext_resource type="Script" path="res://scripts/data/animal_placement.gd" id="5_ap"]
 [ext_resource type="Script" path="res://scripts/data/inspect_placement.gd" id="6_ip"]
+[ext_resource type="Script" path="res://scripts/data/hunter_placement.gd" id="7_hp"]
 
 [sub_resource type="Resource" id="tr_manor_window"]
 script = ExtResource("4_tr")
@@ -134,6 +135,14 @@ position = Vector3(3.0, 1.1, 29.2)
 prompt = "Examine the gate lock"
 text = "The lock plate on this side is smooth and untouched. Through the bars you can see the outer plate: the keyhole is scored with fresh scratches, as if someone has been trying to get IN, not out."
 
+[sub_resource type="Resource" id="hu_lamplighter"]
+script = ExtResource("7_hp")
+hunter_id = &"lamplighter"
+camp = Vector3(-13.5, 0, -19)
+yaw_degrees = -90.0
+patrol = PackedVector3Array(-9, 0, -18.6, -3, 0, -18.6, 1, 0, -18.4, 6.5, 0, -18.6, 11, 0, -17.5, 11.5, 0, -11, 11.5, 0, -5.5, 11, 0, 0.2, 15.5, 0, 0.4, 7.5, 0, 3, 3, 0, -3.2, 3, 0, 3, 3, 0, 9, 7, 0, 10.4, 3, 0, 15, 10, 0, 18.4)
+pauses = PackedFloat32Array(2, 2, 6, 2, 3, 2, 4, 3, 5, 2, 6, 2, 2, 4, 2, 5)
+
 [sub_resource type="Resource" id="np_tomas"]
 script = ExtResource("2_np")
 npc_id = &"tomas"
@@ -183,3 +192,5 @@ animals = Array[ExtResource("5_ap")]([SubResource("an_fox_a"), SubResource("an_f
 inspectables = Array[ExtResource("6_ip")]([SubResource("in_watch_log"), SubResource("in_north_wax"), SubResource("in_gate_lock")])
 lamp_positions = PackedVector3Array(1, 0, -4.6, 5, 0, 4, 1, 0, 12.5, 5, 0, 21, -8, 0, 3.9, -17.5, 0, 3.9, 8.6, 0, 11.7, 15.4, 0, 17.2)
 traversals = Array[ExtResource("4_tr")]([SubResource("tr_manor_window"), SubResource("tr_cottage_window"), SubResource("tr_gatehouse_window"), SubResource("tr_manor_roof"), SubResource("tr_manor_hatch"), SubResource("tr_ruined_wall"), SubResource("tr_cottage_roof"), SubResource("tr_hut_roof")])
+hunters = Array[ExtResource("7_hp")]([SubResource("hu_lamplighter")])
+nav_points = PackedVector3Array(-13.5, 0, -19, -9, 0, -18.6, -3, 0, -18.6, 1, 0, -18.4, 6.5, 0, -18.6, 11, 0, -17.5, 11.5, 0, -11, 11.5, 0, -5.5, 11, 0, 0.2, 15.5, 0, 0.4, 3, 0, -3.2, 3, 0, -6, 3, 0, -8, 7.5, 0, 3, 3, 0, 3, 3, 0, 9, 7, 0, 10.4, 3, 0, 15, 10, 0, 18.4, 15.3, 0, 18.4, 16, 0, 18.4, 18, 0, 18.3, 3, 0, 22.5, 6.3, 0, 25.7, 8, 0, 25.7, 9.9, 0, 25.7, -4, 0, 5, -11, 0, 5, -17, 0, 5.2, -18.9, 0, 5.5, -21.5, 0, 5.5)

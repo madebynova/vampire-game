@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="HunterProfile" load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/hunter_profile.gd" id="1_hp"]
+[ext_resource type="Script" path="res://scripts/data/blood_memory.gd" id="2_mem"]
+
+[sub_resource type="Resource" id="mem_hunter"]
+script = ExtResource("2_mem")
+condition = &"hunter"
+title = "The Lamp Is Lit"
+text = "Cold iron and hawthorn, and a hand that does not shake. A chapel that smells of tallow. A hooded woman presses a silvered blade into your palm: 'Blackthorn is shut. The gate is sealed from outside, the lamps are counted, and what sleeps in the house wakes at dusk. Do not go in by the road.'\n\nYou stood under the north window three nights with wax on your boots, listening for a sleeper who does not breathe. On the fourth you saw a shadow turn to mist at a sill and understood that you had been watched from the first.\n\nBehind her, eight more lanterns, unlit. You were sent first so that the rest would know where to stand."
+facts = PackedStringArray("Hollis Crane was sent by an order that keeps lamps.", "They sealed the Blackthorn gate from outside.", "He watched the north window for three nights before he met you.", "Eight more lanterns wait beyond the gate.")
+
+[resource]
+script = ExtResource("1_hp")
+id = &"lamplighter"
+display_name = "Hollis Crane"
+title = "Lamplighter"
+lines_suspicious = PackedStringArray("Who's there?", "Show yourself.", "Something moved...", "Hm.")
+lines_spot = PackedStringArray("There you are.", "Found you, leech.", "Not tonight, monster.", "I see you!")
+lines_lost = PackedStringArray("Where did it go...", "Gone. For now.", "Slippery thing.")
+lines_hurt = PackedStringArray("Ngh!", "Cursed thing!", "Hold... hold the line.")
+lines_down = PackedStringArray("...the Order... will...", "Not... yet...")
+memories = Array[ExtResource("2_mem")]([SubResource("mem_hunter")])

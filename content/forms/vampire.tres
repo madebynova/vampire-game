@@ -24,6 +24,7 @@ heartbeat_bpm = 44.0
 traversal = PackedStringArray("window", "climb")
 regen_per_sec = 4.0
 regen_blood_cost = 0.5
+strike_damage = 20.0
 skin_color = Color(0.66, 0.68, 0.8, 1)
 cloth_color = Color(0.09, 0.03, 0.05, 1)
 pants_color = Color(0.05, 0.04, 0.06, 1)

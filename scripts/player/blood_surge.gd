@@ -14,6 +14,7 @@ signal ended
 @export var speed_bonus := 0.16      ## at power 1.0
 @export var jump_bonus := 0.10
 @export var sun_relief := 0.15       ## fraction of sun heat shrugged off at power 1.0
+@export var strike_bonus := 0.25     ## extra Rend damage at power 1.0 (see PlayerCombat)
 @export var max_seconds := 120.0
 @export var fade_in := 0.5
 @export var fade_out := 4.0          ## the last seconds taper instead of switching off
@@ -72,9 +73,14 @@ func effect_text(p: float) -> String:
 		roundi(speed_bonus * p * 100.0), roundi(jump_bonus * p * 100.0), roundi(sun_relief * minf(p, 1.3) * 100.0)]
 
 
+## What the rush adds to a fight: Rend hits harder.
+func strike_text(p: float) -> String:
+	return "Rend hits %d%% harder" % roundi(strike_bonus * p * 100.0)
+
+
 ## The same in few words, for the line under the timer on the HUD.
 func effect_short() -> String:
-	return "Faster, higher jumps, Sense is free, the sun burns slower"
+	return "Faster, higher jumps, Sense is free, the sun burns slower, Rend hits harder"
 
 
 ## "0:32" style clock for a number of seconds.

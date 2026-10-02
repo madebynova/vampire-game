@@ -10,6 +10,7 @@ extends Node
 ##   A / Cross   jump / confirm  B / Circle   cancel / back
 ##   X / Square  interact, feed (hold)        Y / Triangle  transform
 ##   LB / L1     Vampiric Sense (toggle)      R3 also toggles Sense
+##   RB / R1     Rend (the vampire's strike; also left mouse button / R)
 ##   L3          run (toggle)    RT / R2      run (hold)
 ##   Menu        pause           View         controls
 
@@ -23,7 +24,7 @@ const PLAYSTATION := &"playstation"
 const GAMEPLAY_ACTIONS: Array[StringName] = [
 	&"move_forward", &"move_back", &"move_left", &"move_right", &"look_up", &"look_down",
 	&"look_left", &"look_right", &"sprint", &"sprint_toggle", &"jump", &"interact", &"feed",
-	&"transform", &"vampiric_sense", &"pause", &"toggle_help", &"toggle_debug", &"memory_dismiss",
+	&"transform", &"vampiric_sense", &"pause", &"toggle_help", &"toggle_debug", &"memory_dismiss", &"attack",
 ]
 
 const _XBOX_NAMES := {
@@ -60,6 +61,12 @@ func _ready() -> void:
 	_register(&"feed", [KEY_E], [], [JOY_BUTTON_X])
 	_register(&"transform", [KEY_F], [], [JOY_BUTTON_Y])
 	_register(&"vampiric_sense", [KEY_Q], [], [JOY_BUTTON_LEFT_SHOULDER, JOY_BUTTON_RIGHT_STICK])
+	# Rend, the vampire's strike: R, the left mouse button, or the right bumper (RT stays the run trigger).
+	_register(&"attack", [KEY_R], [], [JOY_BUTTON_RIGHT_SHOULDER])
+	var strike_click := InputEventMouseButton.new()
+	strike_click.button_index = MOUSE_BUTTON_LEFT
+	strike_click.device = -1
+	InputMap.action_add_event(&"attack", strike_click)
 	_register(&"pause", [KEY_ESCAPE], [], [JOY_BUTTON_START])
 	_register(&"toggle_help", [KEY_H], [], [JOY_BUTTON_BACK])
 	_register(&"toggle_debug", [KEY_F3])

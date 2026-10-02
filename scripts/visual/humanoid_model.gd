@@ -21,6 +21,8 @@ var _leg_l: Node3D
 var _leg_r: Node3D
 var _arm_l: Node3D
 var _arm_r: Node3D
+var _hand_l: Node3D
+var _hand_r: Node3D
 var _head: Node3D
 var _cloak: Node3D
 var _cape: Array[Node3D] = []
@@ -55,6 +57,9 @@ func _build() -> void:
 	_leg_r = _limb(Vector3(0.11, 0.86, 0.0), 0.09, 0.86, _mat_pants, false)
 	_arm_l = _limb(Vector3(-0.29, 1.42, 0.0), 0.065, 0.62, _mat_cloth, true)
 	_arm_r = _limb(Vector3(0.29, 1.42, 0.0), 0.065, 0.62, _mat_cloth, true)
+	# A place in each hand to hang something from (a lantern, a blade).
+	_hand_l = _hand_slot(_arm_l, 0.62)
+	_hand_r = _hand_slot(_arm_r, 0.62)
 
 	var torso := MeshInstance3D.new()
 	var tm := CapsuleMesh.new()
@@ -335,6 +340,43 @@ func cape_tip() -> Vector2:
 		pz += -sin(cum) * seg_len
 		py += -cos(cum) * seg_len
 	return Vector2(pz, py)
+
+
+func _hand_slot(arm: Node3D, length: float) -> Node3D:
+	var slot := Node3D.new()
+	slot.name = "Hand"
+	slot.position = Vector3(0, -length - 0.02, 0)
+	arm.add_child(slot)
+	return slot
+
+
+## The point at the end of an arm that carries whatever is held (the right hand's blade, the left's lantern).
+func hand_slot(right: bool) -> Node3D:
+	return _hand_r if right else _hand_l
+
+
+func head_node() -> Node3D:
+	return _head
+
+
+## Set an arm directly (after animate(), which otherwise swings it): `pitch` swings it forward (+) or back (-),
+## `roll` out to the side (right arm: +; left arm: -).
+func arm_pose(right: bool, pitch: float, roll := 0.0) -> void:
+	var arm := _arm_r if right else _arm_l
+	arm.rotation.x = pitch
+	arm.rotation.z = roll
+
+
+## A swing of the right arm for the vampire's Rend: `coil` 0..1 draws it back and out, `slash` 0..1 whips it
+## across and down. Call after animate() each frame while striking.
+func strike_pose(coil: float, slash: float) -> void:
+	var amount := maxf(coil, slash)
+	if amount <= 0.001:
+		return
+	_arm_r.rotation.x = lerpf(_arm_r.rotation.x, lerpf(-1.5, 1.9, slash), amount)
+	_arm_r.rotation.z = lerpf(_arm_r.rotation.z, lerpf(0.9, -0.35, slash), amount)
+	_arm_l.rotation.x = lerpf(_arm_l.rotation.x, 0.7, amount * 0.6)
+	_head.rotation.x = lerpf(_head.rotation.x, 0.18, slash)
 
 
 ## Eye glow strength (transformation flares and fades it).

@@ -25,6 +25,9 @@ var input_enabled := true
 var fov_offset := 0.0
 var roll_offset := 0.0           ## radians
 var distance_offset := 0.0       ## metres; negative = closer
+## Sideways shift of the camera (metres, + = the player stands left of centre). A fight sets it so that whoever
+## is in front of you is not hidden behind your own back.
+var shoulder := 0.0
 
 var _target: Node3D
 var _shake := 0.0
@@ -116,6 +119,7 @@ func _process(delta: float) -> void:
 
 	var dist := (_focus_distance if _focus else default_distance) + distance_offset
 	spring.spring_length = lerpf(spring.spring_length, dist, 1.0 - exp(-5.0 * delta))
+	spring.position.x = lerpf(spring.position.x, 0.0 if _focus else shoulder, 1.0 - exp(-4.0 * delta))
 	var fov_goal := (_focus_fov if _focus else base_fov + fov_boost) + fov_offset
 	if _fov_smooth < 0.0:
 		_fov_smooth = camera.fov

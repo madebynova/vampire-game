@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="FeedStyle" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/feed_style.gd" id="1_fs"]
+
+[resource]
+script = ExtResource("1_fs")
+id = &"hunter"
+display_name = "Spent"
+description = "Out cold and bleeding where he fell: nobody to hear it. The richest drink in Blackthorn."
+yield_multiplier = 1.0
+surge_name = "Hunter's Rush"
+surge_power = 1.45
+surge_seconds = 65.0
+noise_radius = 0.0
+noise_alarm = 0.0
+witness_radius = 10.0
+camera_shake = 0.008
+feed_volume_db = -3.0
+feed_pitch = 0.95
+haptic_strength = 0.55
+taste_note = "Salt and hawthorn, and under it the cold taste of the silver he swallowed for courage."
+sense_hint = "his memory waits"
+memory_tint = Color(0.88, 0.82, 0.55, 1)
+memory_fragmentation = 0.35
+memory_bed = &"memory_calm"
+memory_pace = 1.1
+memory_frame = "Cold, clear, and not his to keep."

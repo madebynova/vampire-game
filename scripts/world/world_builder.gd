@@ -44,6 +44,9 @@ var location: LocationData
 var npcs: Dictionary = {}     ## id -> HumanNpc
 var animals: Array[Animal] = []   ## the wild creatures (foxes), in placement order
 var inspectables: Array[Inspectable] = []   ## small things to read
+var hunters: Array[Hunter] = []   ## the vampire hunters (away until their hours)
+var nav: HuntNav                  ## the waypoint graph hunters walk
+var camp_clues: Array[Inspectable] = []   ## what a hunter leaves in his camp
 var secrets: Dictionary = {}  ## id -> SecretStash
 var tomas: HumanNpc
 var elise: HumanNpc
@@ -73,6 +76,7 @@ func build() -> void:
 	_animals()
 	_inspectables()
 	_traversals()
+	_hunters()
 
 
 # ---------------------------------------------------------------- terrain
@@ -216,6 +220,7 @@ func _omni(pos: Vector3, color: Color, energy: float, rng: float) -> void:
 	l.light_energy = energy
 	l.omni_range = rng
 	add_child(l)
+	WorldLight.register(l)   # a lit room is a lit room to anyone looking in
 
 
 # ---------------------------------------------------------------- gatehouse (Elise)
@@ -471,6 +476,75 @@ func _den(pos: Vector3) -> void:
 	mouth.position = pos + Vector3(0.0, 0.14, 0.78)
 	mouth.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mouth)
+
+
+# ---------------------------------------------------------------- hunters
+
+## The vampire hunters the location lists. Each starts unseen at his camp and comes out in his hours.
+func _hunters() -> void:
+	nav = HuntNav.new(location.nav_points)
+	for p in location.hunters:
+		var profile := ContentRegistry.get_def(&"HunterProfile", p.hunter_id) as HunterProfile
+		if profile == null:
+			push_warning("Location '%s' references unknown hunter '%s'" % [location.id, p.hunter_id])
+			continue
+		var h := Hunter.new()
+		h.profile = profile
+		h.placement = p
+		h.nav = nav
+		h.position = p.camp
+		add_child(h)
+		hunters.append(h)
+		if p.build_camp:
+			_camp(p)
+
+
+## A hunter's camp, empty by day: a bedroll, a crate with a journal on it, a cold fire ring, stakes, a lantern
+## hung on a post (it burns at night). Two small things to read; they say what the people only hint at.
+func _camp(p: HunterPlacement) -> void:
+	var c := p.camp
+	var canvas := Color(0.2, 0.24, 0.16)
+	Greybox.decal(self, c + Vector3(-0.9, 0.06, -0.5), Vector3(1.9, 0.12, 0.75), canvas)
+	Greybox.decal(self, c + Vector3(-1.7, 0.13, -0.5), Vector3(0.4, 0.1, 0.5), canvas.lightened(0.25))
+	Greybox.box(self, c + Vector3(1.3, 0.35, -1.4), Vector3(0.7, 0.7, 0.7), WOOD, Greybox.WORLD, "CampCrate")
+	Greybox.decal(self, c + Vector3(1.3, 0.72, -1.4), Vector3(0.4, 0.04, 0.3), Color(0.8, 0.74, 0.58))
+	# A cold fire ring: dark ash inside a circle of stones.
+	var ring := c + Vector3(0.4, 0.0, 1.5)
+	Greybox.decal(self, ring + Vector3(0, 0.03, 0), Vector3(0.9, 0.05, 0.9), Color(0.07, 0.065, 0.06))
+	for i in 7:
+		var a := TAU * i / 7.0
+		Greybox.decal(self, ring + Vector3(cos(a) * 0.55, 0.1, sin(a) * 0.55), Vector3(0.22, 0.2, 0.22), STONE.darkened(0.15))
+	# Ash-wood stakes leaning on the crate.
+	for i in 3:
+		var stake := Greybox.decal(self, c + Vector3(1.0 + i * 0.12, 0.58, -0.95 - i * 0.05), Vector3(0.05, 1.15, 0.05), Color(0.62, 0.55, 0.4))
+		stake.rotation = Vector3(deg_to_rad(-16.0), 0.0, deg_to_rad(8.0 - i * 7.0))
+	# The lantern post.
+	var post := c + Vector3(2.4, 0.0, 0.9)
+	Greybox.cylinder(self, post + Vector3(0, 1.1, 0), 0.06, 2.2, DARK_WOOD)
+	Greybox.box(self, post + Vector3(0, 2.3, 0), Vector3(0.26, 0.3, 0.26), Color(1.0, 0.75, 0.4), Greybox.SUN_ONLY, "LampHead").get_child(0).material_override = Greybox.material(Color(1.0, 0.75, 0.4), 1.2)
+	var lamp := NightLight.new()
+	lamp.position = post + Vector3(0, 2.3, 0)
+	lamp.night_energy = 1.0
+	lamp.omni_range = 7.0
+	lamp.light_color = Color(1.0, 0.72, 0.4)
+	lamp.shadow_enabled = false
+	add_child(lamp)
+	for def in [
+		[&"hunter_bedroll", c + Vector3(-0.9, 0.25, -0.5), "Examine the bedroll",
+			"A bedroll, warm from no one. Ash-wood stakes sharpened to needle points, a vial of lavender oil, a tin of salt and a single silver nail. The candle stub in the lantern matches the wax under the manor's north window."],
+		[&"hunter_journal", c + Vector3(1.3, 0.85, -1.4), "Read the hunter's journal",
+			"'Night three. The house breathes at dusk. The lamps along the road gutter one by one, and the watchman counts nine and swears he sees eight. The gate is sealed on the Order's word: nothing leaves Blackthorn. Lavender on my boots, so that it cannot smell me. If it sleeps by day, it sleeps in the house; if it sleeps in the house, it sleeps on the north side. - H.C.'"],
+	]:
+		var ip := InspectPlacement.new()
+		ip.id = def[0]
+		ip.position = def[1]
+		ip.prompt = def[2]
+		ip.text = def[3]
+		var it := Inspectable.new()
+		it.placement = ip
+		it.position = ip.position
+		add_child(it)
+		camp_clues.append(it)
 
 
 func _spawn_npc(profile: NpcProfile, pos: Vector3, yaw_degrees: float) -> HumanNpc:

@@ -20,6 +20,7 @@ const GROUPS := [
 		["Transform", "", [&"transform"], [&"transform"]],
 		["Vampiric Sense", "vampire", [&"vampiric_sense"], [&"vampiric_sense"]],
 		["Feed (hold)", "vampire", [&"feed"], [&"feed"]],
+			["Rend (strike)", "vampire", [&"attack"], [&"attack"]],
 	]],
 	["THE WORLD", [
 		["Talk, read, dig, sleep", "", [&"interact"], [&"interact"]],

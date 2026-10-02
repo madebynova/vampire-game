@@ -15,6 +15,7 @@
 [ext_resource type="Script" path="res://scripts/player/blood_surge.gd" id="14_surge"]
 [ext_resource type="Script" path="res://scripts/player/traversal_controller.gd" id="15_trav"]
 [ext_resource type="Script" path="res://scripts/player/transform_presentation.gd" id="16_tfx"]
+[ext_resource type="Script" path="res://scripts/player/player_combat.gd" id="17_combat"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.35
@@ -81,6 +82,9 @@ script = ExtResource("15_trav")
 
 [node name="TransformFx" type="Node" parent="Components"]
 script = ExtResource("16_tfx")
+
+[node name="Combat" type="Node" parent="Components"]
+script = ExtResource("17_combat")
 
 [node name="Feedback" type="Node" parent="Components"]
 script = ExtResource("13_fb")

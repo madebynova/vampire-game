@@ -196,6 +196,18 @@ func _register_lazy() -> void:
 	_lazy[&"ui_move"] = [SfxSynth.ui_move, false, fx]
 	_lazy[&"ui_confirm"] = [SfxSynth.ui_confirm, false, fx]
 	_lazy[&"ui_back"] = [SfxSynth.ui_back, false, fx]
+	# The hunt (v0.2.0).
+	_lazy[&"step_boot"] = [SfxSynth.step_boot, false, fx]
+	_lazy[&"lantern_clink"] = [SfxSynth.lantern_clink, false, fx]
+	_lazy[&"hunter_notice"] = [SfxSynth.hunter_notice, false, fx]
+	_lazy[&"hunter_spot"] = [SfxSynth.hunter_spot, false, fx]
+	_lazy[&"hunter_windup"] = [SfxSynth.hunter_windup, false, fx]
+	_lazy[&"hunter_swing"] = [SfxSynth.hunter_swing, false, fx]
+	_lazy[&"hunter_hurt"] = [SfxSynth.hunter_hurt, false, fx]
+	_lazy[&"hunter_down"] = [SfxSynth.hunter_down, false, fx]
+	_lazy[&"rend_swing"] = [SfxSynth.rend_swing, false, fx]
+	_lazy[&"rend_hit"] = [SfxSynth.rend_hit, false, fx]
+	_lazy[&"hit_taken"] = [SfxSynth.hit_taken, false, fx]
 
 
 func _to_wav(samples: PackedFloat32Array, looped := false) -> AudioStreamWAV:

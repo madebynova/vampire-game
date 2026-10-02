@@ -16,6 +16,10 @@ extends Node3D
 @onready var moon: DirectionalLight3D = $Moon
 @onready var tod: TimeOfDay = $TimeOfDay
 
+## The hunt: reads the world and tells the player, in a line, what is going on. Made here so every way of
+## running the game (and every test) has one.
+var hunt: HuntDirector
+
 ## Seconds between the end of a feed (the rush) and the Blood Memory taking over the screen.
 const MEMORY_DELAY := 0.55
 
@@ -29,6 +33,10 @@ func _ready() -> void:
 	atmosphere.setup(tod, sun, moon)
 	atmosphere.set_vision(player.form.current, 0.0)
 	hud.bind(player)
+	hunt = HuntDirector.new()
+	hunt.name = "HuntDirector"
+	add_child(hunt)
+	hunt.setup(player, world, hud)
 	_bind_presentation()
 	Sfx.start_loop(&"wind_loop", -24.0)
 	Sfx.start_loop(&"crickets_loop", -80.0)
@@ -87,10 +95,11 @@ func _on_hour_changed(h: int) -> void:
 		Sfx.play(&"bell", -4.0, 0.8)
 
 
-func _on_player_died(_cause: StringName) -> void:
+func _on_player_died(cause: StringName) -> void:
 	screen_fx.feed_target = 0.0
 	screen_fx.sense_target = 0.0
-	screen_fx.flash(Color(1.0, 0.9, 0.7), 1.0, 1.2)
+	screen_fx.wound_target = 0.0
+	screen_fx.flash(Color(0.55, 0.02, 0.04) if cause == &"hunter" else Color(1.0, 0.9, 0.7), 1.0, 1.2)
 	memory_view.force_close()
 	await get_tree().create_timer(2.4).timeout
 	world.coffin.wake(player, &"death")
@@ -102,13 +111,19 @@ func _process(_delta: float) -> void:
 	var night := tod.darkness()
 	var day := clampf(tod.sun_strength() * 1.4, 0.0, 1.0)
 	var keen := 1.4 if player.form.current.can_feed else 1.0
-	Sfx.set_loop_volume(&"crickets_loop", linear_to_db(maxf(night * 0.5 * keen, 0.0001)))
+	# The night holds its breath when a hunter is close.
+	var hush := hunt.night_hush() if hunt != null else 1.0
+	Sfx.set_loop_volume(&"crickets_loop", linear_to_db(maxf(night * 0.5 * keen * hush, 0.0001)))
 	Sfx.set_loop_volume(&"birds_loop", linear_to_db(maxf(day * 0.35, 0.0001)))
 	var s := player.sunlight
 	var glare := s.burn_ratio() * 0.9
 	if s.stage > 0 and s.strength > 0.03:
 		glare += 0.08
 	screen_fx.sun_target = clampf(glare, 0.0, 1.0)
+	# Hurt, badly: the edges of the world stay red until the wounds close.
+	var vitality := player.health.value / player.health.max_health
+	var resting := player.state.mode == PlayerState.Mode.RESTING or player.state.is_dead()
+	screen_fx.wound_target = 0.0 if resting else clampf((0.45 - vitality) / 0.45, 0.0, 1.0)
 
 
 func _physics_process(_delta: float) -> void:

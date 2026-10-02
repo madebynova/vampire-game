@@ -11,6 +11,14 @@ var _tod: TimeOfDay
 var _seed := randf() * 10.0
 
 
+func _ready() -> void:
+	WorldLight.register(self)
+
+
+func _exit_tree() -> void:
+	WorldLight.unregister(self)
+
+
 func _process(_delta: float) -> void:
 	if _tod == null:
 		_tod = get_tree().get_first_node_in_group(&"time_of_day") as TimeOfDay

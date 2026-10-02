@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BloodDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/blood_definition.gd" id="1_b"]
+
+[resource]
+script = ExtResource("1_b")
+id = &"hunter"
+display_name = "Hunter's"
+description = "Salt, hawthorn and cold silver. A trained heart gives a hard, clean rush that does not fade quickly."
+sense_color = Color(0.95, 0.85, 0.55, 1)
+yield_multiplier = 1.0
+surge_seconds_multiplier = 1.0
+surge_power_multiplier = 1.0

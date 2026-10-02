@@ -178,6 +178,7 @@ func wake(player: Player, kind: StringName, until_hour := -1.0, text := "") -> v
 	player.state.set_mode(PlayerState.Mode.RESTING)
 	get_tree().call_group(&"npcs", &"new_day")
 	get_tree().call_group(&"animals", &"new_day")
+	get_tree().call_group(&"hunters", &"player_rested", kind)
 	get_tree().call_group(&"secrets", &"new_day")
 	player.place_at(spawn.global_position, spawn_yaw())
 	player.visual.lying = 0.0

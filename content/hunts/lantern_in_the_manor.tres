@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="HuntDefinition" load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/hunt_definition.gd" id="1_hunt"]
+[ext_resource type="Script" path="res://scripts/data/hunt_clue.gd" id="2_clue"]
+
+[sub_resource type="Resource" id="c_wax"]
+script = ExtResource("2_clue")
+id = &"wax"
+kind = 0
+ref = &"north_wax"
+text = "Wax and lavender oil under the north window belong to a watcher."
+
+[sub_resource type="Resource" id="c_lock"]
+script = ExtResource("2_clue")
+id = &"lock"
+kind = 0
+ref = &"gate_lock"
+text = "Someone sealed the gate from outside."
+
+[sub_resource type="Resource" id="c_log"]
+script = ExtResource("2_clue")
+id = &"log"
+kind = 0
+ref = &"watch_log"
+text = "The watchman hides something: a fifth line, scratched out."
+
+[sub_resource type="Resource" id="c_lantern"]
+script = ExtResource("2_clue")
+id = &"lantern"
+kind = 1
+ref = &"lantern"
+text = "A lantern moves behind the manor after dark."
+
+[sub_resource type="Resource" id="c_camp"]
+script = ExtResource("2_clue")
+id = &"camp"
+kind = 0
+ref = &"hunter_bedroll"
+text = "He camps in the pines behind the manor."
+
+[sub_resource type="Resource" id="c_journal"]
+script = ExtResource("2_clue")
+id = &"journal"
+kind = 0
+ref = &"hunter_journal"
+text = "An order sealed Blackthorn and sent a lamplighter to find where you sleep."
+
+[resource]
+script = ExtResource("1_hunt")
+id = &"lantern_in_the_manor"
+display_name = "A Lantern in the Manor"
+title = "THE HUNT"
+hunter_id = &"lamplighter"
+text_rumor = "A lantern walks Blackthorn after dark. Find out who carries it."
+text_sighted = "A hunter walks the grounds with a silver blade, and he has not noticed you. Take him from behind, drop onto him from above - or stay in the dark."
+text_engaged = "He has seen you. Break his line of sight: the windows and the rooftops are yours, not his."
+text_wary = "He has lost you, and he is searching. Keep to the dark."
+text_down = "The hunter is down. Drink from him - or leave him, and he will rise again."
+text_done = "The lantern is out. Blackthorn is yours again, for now."
+text_withdrawn = "The hunter has withdrawn with the dawn. He will be back at dusk."
+clues = Array[ExtResource("2_clue")]([SubResource("c_wax"), SubResource("c_lock"), SubResource("c_log"), SubResource("c_lantern"), SubResource("c_camp"), SubResource("c_journal")])
