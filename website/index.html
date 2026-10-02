@@ -8,8 +8,9 @@
       data-play-url="play/"
   on the <html> tag below and every PLAY NOW button becomes a real link. Nothing else needs to change.
 
-  LAUNCHER HOOK: once a launcher release exists on GitHub, set data-launcher-url to the exe's download
-  URL (see docs/RELEASING.md) and the DOWNLOAD LAUNCHER button becomes a real link.
+  WINDOWS DOWNLOAD: the Windows card links straight to the v0.1.0 GitHub Release asset. For a new release,
+  change the version in that one link (see docs/RELEASING.md). LAUNCHER HOOK (not used yet): once a launcher
+  exists, a .js-launcher button plus data-launcher-url on <html> turn it on.
 
   FEEDBACK: the feedback forms and community reports talk to Supabase. Their public settings live in
   assets/js/config.js (see docs/FEEDBACK_BACKEND.md). Until that is filled in, the site shows
@@ -182,7 +183,7 @@
       </div>
       <p class="play-note reveal" id="play-note" style="--d:300ms">
         The browser build isn't connected yet, so this button is a placeholder.
-        The prototype currently runs from the <a href="#status">Godot project</a>.
+        A Windows version is available now: see <a href="#play">Play</a>.
       </p>
     </div>
 
@@ -419,7 +420,7 @@
         <p class="kicker">Play</p>
         <h2 id="play-title">Play Vampire Game</h2>
         <div class="orn" aria-hidden="true"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></div>
-        <p class="section-sub">Two ways in. Both are being prepared &mdash; neither is available yet, and nothing here is faked.</p>
+        <p class="section-sub">Two ways in. The Windows build is available now; the browser version is still being prepared.</p>
       </header>
 
       <div class="play-grid">
@@ -439,18 +440,18 @@
         <article class="play-card play-card-launcher reveal" style="--d:100ms">
           <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-download"/></svg></div>
           <p class="play-kicker">For Windows</p>
-          <h3>Vampire Game Launcher</h3>
-          <p class="play-copy">The full Windows game uses the official launcher. Install the launcher once and let it keep your game updated automatically.</p>
+          <h3>Windows version</h3>
+          <p class="play-copy">The standalone Windows build is now available. Download the zip, extract it, and run <code>VampireGame.exe</code>.</p>
           <ul class="mini-list">
-            <li>Installs the Windows game for you</li>
-            <li>Checks GitHub Releases for new versions</li>
-            <li>Updates with one click</li>
-            <li>Keeps your settings and saves separate &mdash; updates never wipe them</li>
+            <li>Version 0.1.0, a development build &mdash; Windows 10 or 11, 64-bit</li>
+            <li>About 37 MB. Needs a graphics card with DirectX 12 or Vulkan support</li>
+            <li>Not code-signed yet, so Windows may warn you: choose <em>More info</em>, then <em>Run anyway</em></li>
+            <li>Settings live in <code>%APPDATA%\VampireGame</code>, outside the game folder</li>
           </ul>
           <div class="play-actions">
-            <a class="btn btn-play btn-xl is-disabled js-launcher" role="button" aria-disabled="true" tabindex="0">
+            <a class="btn btn-play btn-xl" href="https://github.com/madebynova/vampire-game/releases/download/v0.1.0/VampireGame-Windows-v0.1.0.zip" rel="noopener">
               <svg class="ico" aria-hidden="true"><use href="#i-download"/></svg>
-              <span class="btn-text"><span class="btn-label">Download Launcher</span><span class="btn-sub">Coming soon</span></span>
+              <span class="btn-text"><span class="btn-label">Download Windows Build</span><span class="btn-sub">v0.1.0 &middot; .zip</span></span>
             </a>
             <a class="btn btn-ghost" href="https://github.com/madebynova/vampire-game/releases" rel="noopener">
               <span class="btn-text"><span class="btn-label">View Releases</span></span>
@@ -459,7 +460,7 @@
           </div>
         </article>
       </div>
-      <p class="play-footnote reveal">No launcher or Windows build has been published yet. Releases are where they will appear, and the launcher will update the game from there.</p>
+      <p class="play-footnote reveal">An official launcher that installs and updates the game automatically is planned. For now: download, extract, run.</p>
     </div>
   </section>
 
@@ -662,12 +663,12 @@
             <li>Simple NPC pathing</li>
             <li>Traversal uses authored routes, not free climbing</li>
             <li>Controllers not yet tried on hardware</li>
-            <li>No built executable or web build yet</li>
+            <li>No browser build yet; the Windows build is not code-signed</li>
           </ul>
         </div>
         <div class="status-col status-col-try reveal" style="--d:140ms">
           <h3>Try it today</h3>
-          <p>The prototype runs from the Godot project:</p>
+          <p>Easiest: the <a href="#play">Windows build</a> (extract, run <code>VampireGame.exe</code>). Or run the Godot project:</p>
           <ol>
             <li>Install <strong>Godot 4.8</strong> (standard build).</li>
             <li>Clone or download the <a href="https://github.com/madebynova/vampire-game" rel="noopener">repository</a>.</li>
@@ -693,7 +694,7 @@
         <div class="link-card is-soon reveal">
           <div class="card-icon"><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg></div>
           <h3>Play Now</h3>
-          <p>Play in your browser, or get the Windows launcher. Neither is available yet; see <a href="#play">Play</a>.</p>
+          <p>The Windows build is available now; the browser version is still planned. See <a href="#play">Play</a>.</p>
           <a class="btn btn-play is-disabled js-play" role="button" aria-disabled="true" tabindex="0">
             <span class="btn-text"><span class="btn-label">Play Now</span><span class="btn-sub">Web build coming soon</span></span>
           </a>

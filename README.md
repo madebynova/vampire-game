@@ -131,7 +131,8 @@ Beyond the game itself, this repository holds the pieces that turn it into somet
 website/   public home page + Player Feedback + Community Reports    (GitHub Pages)   docs/FEEDBACK_BACKEND.md
    |
    +-- PLAY NOW .......... browser build in website/play/            (planned, not built)
-   +-- DOWNLOAD LAUNCHER . launcher/ -> Windows .exe                  (foundation done, not published)
+   +-- DOWNLOAD WINDOWS .. GitHub Release v0.1.0 (VampireGame-Windows-v0.1.0.zip)   (published)
+   +-- LAUNCHER .......... launcher/ -> installs/updates the Windows game        (foundation done, paused)
                               |
                               +-- reads GitHub Releases  ->  downloads VampireGame-Windows-vX.Y.Z.zip  ->  verifies  ->  installs
 VERSION    the one game version number; tools/package_release.ps1 turns an export into a release     docs/RELEASING.md
@@ -142,8 +143,9 @@ supabase/  the feedback database schema (Row Level Security)
 |---|---|
 | Website, feedback forms, community list | built and tested (against a stand-in server); **not deployed** |
 | Feedback database | schema written; **no Supabase project exists yet**, so the site shows "feedback temporarily unavailable" |
-| Launcher (`launcher/`) | logic + window built, 26 tests pass; **no `.exe` built, no game release to install yet** |
-| Release tooling (`tools/package_release.ps1`) | tested with a stand-in build; **no real Windows export has been made** |
+| Windows game | **released as v0.1.0** (GitHub Release); exported, tested inside the exported build, and run by hand |
+| Launcher (`launcher/`) | logic + window built, 26 tests pass, accepts the real v0.1.0 zip; **paused: no launcher `.exe` built** |
+| Release tooling (`tools/package_release.ps1`) | used for the real v0.1.0 release |
 | Browser build | **not started** |
 
 Guides: [`docs/FEEDBACK_BACKEND.md`](docs/FEEDBACK_BACKEND.md) (set up the database), [`docs/RELEASING.md`](docs/RELEASING.md)
@@ -161,9 +163,9 @@ statuses). Feedback is stored in Supabase; see [`docs/FEEDBACK_BACKEND.md`](docs
 `website/assets/js/config.js` and must never contain a secret key.
 
 **Status:** the page is written and tested locally, but **it has not been deployed yet** (GitHub Pages is not
-enabled on this repository). The **PLAY NOW** and **DOWNLOAD LAUNCHER** buttons are deliberate placeholders: there is no Web
-export and no launcher release yet. Each is switched on by one attribute on `<html>` in `website/index.html`
-(`data-play-url`, `data-launcher-url`).
+enabled on this repository). The **PLAY NOW** button is a deliberate placeholder: there is no Web export yet (switch it on with
+`data-play-url` on `<html>` in `website/index.html`). The **DOWNLOAD WINDOWS BUILD** button is a real link to the v0.1.0 release
+asset; for a new release, change the version in that one link. The launcher button hook (`data-launcher-url`) is unused for now.
 
 ### View it locally
 ```
