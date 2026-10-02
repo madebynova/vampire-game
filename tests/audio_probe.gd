@@ -6,6 +6,8 @@ func _ready() -> void:
 	var sfx: Node = load("res://scripts/core/sfx.gd").new()
 	sfx._ready()
 	print("Sfx build time: %d ms" % (Time.get_ticks_msec() - t0))
+	for lazy_name in sfx._lazy.keys():
+		sfx._stream(lazy_name)   # the sounds built on first use
 	var names: Array = sfx._streams.keys()
 	names.sort()
 	for n in names:

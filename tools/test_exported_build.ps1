@@ -20,7 +20,7 @@
 #>
 param(
     [string]$Godot = $env:GODOT,
-    [string[]]$Suites = @("unit_tests", "smoke_test", "scenario_tests", "feel_tests", "polish_tests"),
+    [string[]]$Suites = @("unit_tests", "smoke_test", "scenario_tests", "feel_tests", "polish_tests", "hunt_tests"),
     [string]$Work = (Join-Path ([IO.Path]::GetTempPath()) "vg-selftest")
 )
 
