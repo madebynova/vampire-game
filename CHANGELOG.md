@@ -25,7 +25,11 @@ already existed. See [`docs/PROTOTYPE_NOTES.md`](docs/PROTOTYPE_NOTES.md) (v0.2.
 - **Content**: `content/hunters/lamplighter.tres`, `content/hunts/lantern_in_the_manor.tres`, a `hunter` feed style and blood type, a hunter placement and 31 waypoints in `blackthorn.tres`, a camp.
 - **Eleven procedural sounds**: boots, a lantern, a "hm?", a stab when he sees you, a blade drawn, a swing, a grunt, a fall, claws, flesh, a blow taken.
 - **The night holds its breath**: the crickets go quiet when the hunter is near.
-- Tests: `hunt_tests` (242 checks), `hunt_playthrough` (33 checks, real key events), `hunt_playtest` (27 photographs), `hunt_balance`; all five older suites unchanged.
+- Tests: `hunt_tests` (245 checks), `hunt_playthrough` (33 checks, real key events), `hunt_playtest` (27 photographs), `hunt_balance`; all five older suites unchanged.
+
+### Fixed
+- **Long Blood Memories pushed the reward line and "Continue" off the bottom of a 720 px screen** (the hunter's, and Tomas's *trusting* memory, which has shipped since 0.1.0).
+  `MemoryView.fit_to_screen()` measures the full text and, only when needed, scales the column to fit. Short memories are untouched.
 
 ### Changed
 - The Bloodrush's own description now says it makes Rend hit harder (the pinned wording of the existing description is untouched).

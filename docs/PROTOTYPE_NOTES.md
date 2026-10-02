@@ -13,7 +13,7 @@ See the README. Quick reference (replace `godot` with the 4.8 binary):
 | `godot --headless --path . res://tests/smoke_test.tscn` | 72-check Task 1 playthrough |
 | `godot --headless --path . res://tests/scenario_tests.tscn` | 52-check Task 1.5 scenarios |
 | `godot --headless --path . res://tests/feel_tests.tscn` | 242-check Task 1.75 feel suite (real key / pad / held-button input) |
-| `godot --headless --path . res://tests/hunt_tests.tscn` | 242-check v0.2.0 suite: the hunter, Rend, escapes, the objective, the HUD readouts, the old systems around them (`-- only=...`) |
+| `godot --headless --path . res://tests/hunt_tests.tscn` | 245-check v0.2.0 suite: the hunter, Rend, escapes, the objective, the HUD readouts, the old systems around them (`-- only=...`) |
 | `godot --path . res://tests/hunt_playthrough.tscn -- <dir>` | the whole hunt played with real key events by a script, 33 checks, 17 screenshots |
 | `godot --path . res://tests/hunt_playtest.tscn -- <dir>` | scripted windowed photographs of the camp, the hunter, Sense, the ambush, the tell, the roof, the drink, the menus |
 | `godot --headless --path . res://tests/hunt_balance.tscn` | three simple 'players' fight the hunter and print how it went |
@@ -132,7 +132,7 @@ in 3.7 s for no damage. That is *dangerous if you brawl, easy if you play the ga
 ### How to run what is new
 | Command | What |
 |---|---|
-| `godot --headless --path . res://tests/hunt_tests.tscn` | the v0.2.0 suite (242 checks, ~2.5 min); `-- only=rules,data,nav,strike,senses,combat,escape,down,objective,hours,consequence,hud,regress` |
+| `godot --headless --path . res://tests/hunt_tests.tscn` | the v0.2.0 suite (245 checks, ~2.7 min); `-- only=rules,data,nav,strike,senses,combat,escape,down,objective,hours,consequence,hud,regress` |
 | `godot --path . res://tests/hunt_playthrough.tscn -- <dir>` | **the whole loop played with real key events** by a script (33 checks, ~70 s) with 17 screenshots |
 | `godot --path . res://tests/hunt_playtest.tscn -- <dir>` | the camera crew: the camp, the hunter from four sides, Sense, the ambush, the tell, the roof, the drink, the menus (`only=camp,model,...`) |
 | `godot --headless --path . res://tests/hunt_balance.tscn` | the three-policy fight above |
@@ -145,7 +145,7 @@ walking vs running, Human, walls, mist, what Sense says), **combat** (tell befor
 
 ### Playtest notes
 **What was and was not done.** Besides the suites, I ran the game windowed in the real renderer and photographed it (`hunt_playtest`, 27 shots) and had a script play the loop start to finish with real key events and the real AI
-(`hunt_playthrough`: wake, a clue by day, become a vampire, Sense, find him, shadow him, ambush, take a blow, run for the wall and climb, wait on the roof, drop on him, finish him, drink, the hunt is over, talk to Tomas, sleep). I
+(`hunt_playthrough`: wake, a clue by day, become a vampire, Sense, find him, shadow him, ambush, take a blow, run for the wall and climb, wait on the roof - where he either comes to the foot of the wall and you drop on him, or has lost you and you finish it on the ground - drink, the hunt is over, talk to Tomas, sleep). I
 **did not play by hand**, **did not hold a controller**, and **cannot hear** the procedural audio (I checked only that every new sound exists and has sensible levels). The balance figures come from a bot. Everything here is "reads right in stills and in numbers", not "feels right in the hands".
 
 **Things looking at it changed** (none were caught by the automated checks):
@@ -155,6 +155,11 @@ walking vs running, Human, walls, mist, what Sense says), **combat** (tell befor
 4. With the player on a roof edge the hunter walked *into the building* to stand under them; he now goes to the farthest point he can walk to toward you - the foot of the wall.
 5. The Bloodrush's description did not say it makes Rend hit harder (and the number it gave was invisible): added to the rush's own text, without touching the existing description that a test pins.
 6. Three sounds (the drawn blade, the grunt, the "hm?") were quiet next to the rest; raised. The windup is the thing you listen for.
+7. **The Blood Memory screen pushed its reward line and its "Continue" off the bottom of a 720 px screen** for the longest memories - the hunter's, and also Tomas's *trusting*
+   memory, which has shipped since 0.1.0. A Label only reserves room for the words told so far, so nothing noticed. `MemoryView.fit_to_screen()` now measures the whole text from the font and,
+   only if the column will not fit its usual place, gives it the whole screen and scales it (about x0.97); short memories are untouched.
+8. The hunter's patience for someone on a roof (9 s) started counting while he was still running round the building to get there, so by the time he arrived he gave up. It now runs at a quarter
+   speed until he is at the foot of the wall, and a hunter who *watched you climb* waits there instead of "losing" you. (Outrunning him and climbing out of sight still loses him: that is the point of a roof.)
 
 ### Known issues / limits
 - Not hand-played, no controller, no ears (above). Balance is from a bot. Tell timing is the number most worth feeling.

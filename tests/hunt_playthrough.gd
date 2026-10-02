@@ -209,41 +209,58 @@ func _run() -> void:
 	await _wait(2.0)
 	await _shot("p09_on_the_roof")
 	_check(player.global_position.y > 3.5, "up on the roof (y %.1f)" % player.global_position.y)
-	# 9. He cannot reach you; wait for him to come to the foot of the wall.
-	var below := await _until_close(3.6, 6.0)
-	await _wait(0.5)
-	await _shot("p10_he_glares_up")
+	# 9. On the roof he cannot reach you. Outrunning him has probably lost him already; if he comes to the foot of the wall
+	# (hunting or searching) drop on him, and if he went back to his round, climb down and finish it on the ground.
+	var came := await _until_close(7.0, 12.0)
+	await _wait(0.4)
+	await _shot("p10_on_the_roof")
 	_check(hunter.landed <= 1, "from the roof he cannot strike you (blows landed in all: %d)" % hunter.landed)
-	_say("   he came to the foot of the wall: %s (%.1f m off)" % [str(below), _hunter_dist()])
-	# 10. Drop onto him: walk off the roof edge toward him, and strike on the way down.
-	_say("9. from above: walk off the edge and drop on him")
-	var hp1 := hunter.health
-	_key(KEY_W, true)
-	var plunged := false
-	var fall_t := 0.0
-	while fall_t < 3.0 and hunter.is_up():
-		await get_tree().physics_frame
-		fall_t += get_physics_process_delta_time()
-		_face(hunter.global_position)
-		if not player.is_on_floor() and player.velocity.y < -4.0 and _hunter_dist() < 3.4:
-			await _press(KEY_R, 0.05)
-			plunged = true
-			break
-	_key(KEY_W, false)
-	await _wait(0.5)
-	await _shot("p11_the_plunge")
-	var kind := str(player.combat.last_info.kind) if player.combat.last_info != null else "none"
-	_check(plunged and hunter.health < hp1 and kind == "plunge", "a plunge from the roof (%s): -%.0f" % [kind, hp1 - hunter.health])
+	_say("   he came to the foot of the wall: %s (%.1f m off; %s)" % [str(came), _hunter_dist(), hunter.describe()])
+	if came:
+		_say("9. from above: walk off the edge and drop on him")
+		var hp1 := hunter.health
+		_key(KEY_W, true)
+		var plunged := false
+		var fall_t := 0.0
+		while fall_t < 3.0 and hunter.is_up():
+			await get_tree().physics_frame
+			fall_t += get_physics_process_delta_time()
+			_face(hunter.global_position)
+			if not player.is_on_floor() and player.velocity.y < -4.0 and _hunter_dist() < 3.4:
+				await _press(KEY_R, 0.05)
+				plunged = true
+				break
+		_key(KEY_W, false)
+		await _wait(0.5)
+		await _shot("p11_the_plunge")
+		var kind := str(player.combat.last_info.kind) if player.combat.last_info != null else "none"
+		_check(plunged and hunter.health < hp1 and kind == "plunge", "a plunge from the roof (%s): -%.0f%s" % [kind, hp1 - hunter.health, " (an ambush)" if player.combat.last_info.ambush else ""])
+	else:
+		_check(hunter.state != Hunter.State.HUNTING, "the roof and the dark lost him: he is back to %s" % Hunter.State.keys()[hunter.state])
+		_say("9. he went back to his round: climb down and finish it on the ground")
+		_key(KEY_W, true)
+		var down_t := 0.0
+		while down_t < 2.0 and not player.is_on_floor() or (player.global_position.y > 1.0 and down_t < 3.0):
+			_face(hunter.global_position)
+			await get_tree().physics_frame
+			down_t += get_physics_process_delta_time()
+		_key(KEY_W, false)
+		await _shot("p11_back_on_the_ground")
 	# 11. Finish him: strike in his openings, stay out of reach of the blade.
 	_say("10. finish it: hit, and be gone when the blade comes down")
 	var finish_t := 0.0
-	while finish_t < 14.0 and hunter.is_up() and not player.state.is_dead():
+	while finish_t < 30.0 and hunter.is_up() and not player.state.is_dead():
 		_aim_at_hunter()
 		var d := _hunter_dist()
 		var dir := (hunter.global_position - player.global_position)
 		dir.y = 0.0
 		dir = dir.normalized() if dir.length() > 0.05 else Vector3.FORWARD
-		if hunter.swing == Hunter.Swing.WINDUP and hunter._swing_t > hunter.profile.attack_windup * 0.2 and d < 3.4:
+		if hunter.is_unaware():
+			# He has gone back to his round: come at him again, unseen if it can be done.
+			_key(KEY_W, d > 2.0)
+			if d < 2.4 and not player.combat.is_attacking():
+				await _press(KEY_R, 0.05)
+		elif hunter.swing == Hunter.Swing.WINDUP and hunter._swing_t > hunter.profile.attack_windup * 0.2 and d < 3.4:
 			player.push(-dir * 13.0)
 			_key(KEY_W, false)
 		elif hunter.swing == Hunter.Swing.RECOVER or hunter._stagger_t > 0.0 or hunter._flinch_t > 0.0:

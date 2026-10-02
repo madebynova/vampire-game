@@ -231,6 +231,36 @@ func _run() -> void:
 		main.memory_view.force_close()
 		await _wait(0.8)
 		await _shot("i04_after_rush")
+	if _wants("memory"):
+		_step("l. the hunter's Blood Memory at full reveal (does it fit the screen?)")
+		_reset(23.0)
+		player.form.set_form_immediate(&"vampire")
+		_fast_memory()
+		hunter.deploy(Vector3(3, 0, 0.0), 180.0, Hunter.State.DOWNED)
+		hunter.health = 0.0
+		hunter.inert = true
+		player.surge.start(1.45, 65.0, "Hunter's Rush")
+		var res := hunter.get_feed_result()
+		res["surge_effect"] = "%s, %s" % [player.surge.effect_text(1.45), player.surge.strike_text(1.45)]
+		main.memory_view.present(player, res)
+		await _wait(1.5)
+		print("[PLAY] memory column needs %.0f%% of the screen; region top %.2f; body size %d" % [main.memory_view.content_fraction() * 100.0, main.memory_view._center.anchor_top, main.memory_view._body.get_theme_font_size(&"font_size")])
+		var mv := main.memory_view
+		print("[PLAY]   column scale %.2f, region top %.2f, column min %.0f px (of 720)" % [mv._column.scale.x, mv._center.anchor_top, mv._column.get_combined_minimum_size().y])
+		await _wait(6.5)
+		await _shot("l01_hunter_memory_mid")
+		await _wait(14.0)
+		await _shot("l02_hunter_memory_full")
+		main.memory_view.force_close()
+		await _wait(1.0)
+		# For comparison: the longest memory that was already in the game (Tomas, trusting).
+		world.tomas.was_trusting = true
+		var old_res := world.tomas.get_feed_result()
+		old_res["surge_effect"] = "%s, %s" % [player.surge.effect_text(1.0), player.surge.strike_text(1.0)]
+		main.memory_view.present(player, old_res)
+		await _wait(22.0)
+		await _shot("l03_tomas_trusting_full")
+		main.memory_view.force_close()
 	if _wants("menus"):
 		_step("k. the pause menu and its controls screen, with Rend on it")
 		_reset(23.0)

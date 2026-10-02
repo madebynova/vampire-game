@@ -1321,6 +1321,29 @@ func _test_regressions() -> void:
 	player.form.request_toggle()
 	await _wait(player.form.transform_time + 0.4)
 	_check(player.form.is_form(&"vampire") and player.state.mode == PlayerState.Mode.NORMAL, "the transformation still plays out and hands control back")
+	# A long Blood Memory fits the screen: its reward line and its "Continue" are not pushed off the bottom.
+	_reset()
+	var mv := main.memory_view
+	world.tomas.was_trusting = true
+	var long_ones := {"the hunter's memory": hunter.get_feed_result(), "Tomas, trusting (the longest of the old ones)": world.tomas.get_feed_result()}
+	for who in long_ones:
+		mv.present(player, long_ones[who])
+		await _wait(0.5)
+		var shown_h := mv.fit_to_screen(720.0)
+		_check(shown_h <= 720.0 - 2.0 * MemoryView.SCREEN_MARGIN + 0.5, "%s fits a 720 px screen: %.0f px of it, scaled x%.2f" % [who, shown_h, mv._column.scale.x])
+		mv.force_close()
+		await _wait(0.4)
+	world.tomas.was_trusting = false
+	_reset()
+	await _wait(0.2)
+	# A short one is left exactly where it always was.
+	mv.present(player, world.tomas.get_feed_result())
+	await _wait(0.5)
+	mv.fit_to_screen(720.0)
+	_check(_near(mv._column.scale.x, 1.0) and _near(mv._center.anchor_top, 0.3), "a short memory keeps its usual place (scale %.2f, region top %.2f)" % [mv._column.scale.x, mv._center.anchor_top])
+	mv.force_close()
+	await _wait(0.4)
+	_reset()
 	# The coffin still rests and wakes.
 	world.coffin.wake(player, &"rest", 19.5)
 	await _wait(6.5)
