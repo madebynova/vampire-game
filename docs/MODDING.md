@@ -31,13 +31,15 @@ user://mods/<mod>/mod.cfg  optional manifest  (name, version, author, descriptio
 | People | `NpcProfile` | `content/npcs/` | look, personality (notice radius, sleep depth, follow), dialogue by trust/night, blood type + description, **blood memories**, **daily schedule**, **what they can tell you** (`Tiding`s) |
 | Things people tell you | `Tiding` (inside an NPC) | - | one useful thing, in order of trust and time of day: the words, the plain takeaway ("Learned: ..."), who it introduces (so Sense names them), what hidden thing it reveals |
 | Animals | `AnimalProfile` + `AnimalPlacement` | `content/animals/` | a wild creature that can be fed on: look, how skittish, when it is about, den and roam range, blood type, yield, feed style, and its one memory |
+| Hunters (v0.2.0) | `HunterProfile` + `HunterPlacement` | `content/hunters/` | a vampire hunter: look, health, how fast he walks and runs, how well he sees (cone, range, how much the dark costs him), hears (still / walking / running) and feels, how fast he notices, the length of his blade's tell, its damage, knock-back and stagger, his hours (dusk to dawn), his blood (type, yield, feed style, memory) and what he says. A placement gives him a camp and a round (points and how long he lingers) |
+| The hunt (v0.2.0) | `HuntDefinition` + `HuntClue` | `content/hunts/` | the objective as a few lines (rumour, sighted, engaged, wary, down, done, withdrawn) and the **clues** that count as leads: a clue read (`INSPECT`, by `InspectPlacement` id) or a thing someone told you (`TIDING`, by `Tiding` id). There is no quest log: which line shows is worked out from the hunter's state |
 | Blood memories | `BloodMemory` (inside an NPC or animal) | - | what blood tells you, chosen by the victim's state: `calm`, `asleep`, `afraid`, `trusting`, `any`, or `deep` (opens once every other memory has been heard); may reveal a secret |
 | Schedules | `ScheduleEntry` (inside an NPC) | - | hour range, `patrol`/`idle`/`sleep`, route points, bed height, lantern |
-| Blood types | `BloodDefinition` | `content/blood/` (people: common, aged, bright, iron; animals: `wild`) | Sense colour, feed-yield multiplier, **Bloodrush duration / power multipliers** (effects field reserved) |
-| Feeding styles | `FeedStyle` | `content/feeding/` | **how a feed plays for one victim state** (`calm`, `asleep`, `afraid`, `trusting`, or a new id): yield, Bloodrush power and length, how far the scream carries, how far sight matters, camera shake, feed volume, vibration, taste note, the Sense hint, and the Blood Memory's tint / fragmentation / sound bed / pace / framing line |
+| Blood types | `BloodDefinition` | `content/blood/` (people: common, aged, bright, iron; animals: `wild`; hunters: `hunter`) | Sense colour, feed-yield multiplier, **Bloodrush duration / power multipliers** (effects field reserved) |
+| Feeding styles | `FeedStyle` | `content/feeding/` | **how a feed plays for one victim state** (`calm`, `asleep`, `afraid`, `trusting`, `wild` for animals, `hunter` for a downed hunter, or a new id): yield, Bloodrush power and length, how far the scream carries, how far sight matters, camera shake, feed volume, vibration, taste note, the Sense hint, and the Blood Memory's tint / fragmentation / sound bed / pace / framing line |
 | Sunlight | `SunlightProfile` | `content/sunlight/` | the whole survival curve: stage names, heat thresholds, damage per second, slowdown, cooldown |
 | Sky / time | `DayNightProfile` (+ `RestOption`) | `content/time/` | sky, fog, ambient, sun colour, moon and star strength by hour; **the wake-up times the coffin offers** |
-| Locations | `LocationData` + `NpcPlacement` + `SecretPlacement` + `TraversalPlacement` + `AnimalPlacement` + `InspectPlacement` | `content/locations/` | who lives where, hidden secrets and the flags they set, lamp positions, coffin position, **designated routes (windows, walls, roofs) with their prompts and rules** (`reach`, `level_tolerance`, `lateral_tolerance`, `facing_min`, `barrier`, `lip_height`, `show_wall`), **which animals live where and where they den**, **small things to read** |
+| Locations | `LocationData` + `NpcPlacement` + `SecretPlacement` + `TraversalPlacement` + `AnimalPlacement` + `InspectPlacement` + `HunterPlacement` | `content/locations/` | who lives where, hidden secrets and the flags they set, lamp positions, coffin position, **designated routes (windows, walls, roofs) with their prompts and rules** (`reach`, `level_tolerance`, `lateral_tolerance`, `facing_min`, `barrier`, `lip_height`, `show_wall`), **which animals live where and where they den**, **small things to read**, **hunters (camp + round) and the waypoint graph they path by** (`nav_points`: the author places points on the ground, in doorways and inside rooms; links between them are found automatically wherever a body can walk in a straight line, so windows are never doors) |
 | Sounds | `SoundDefinition` | `content/sounds/` | replaces a named sound with any `AudioStream`: the originals (`heartbeat`, `bite`, `sense_ping`...) **and the Task 1.75 ones** (`transform_vampire`, `transform_human`, `sense_on`, `feed_rush`, `heartbeat_deep`, `heartbeat_sharp`, `memory_calm`, `memory_asleep`, `memory_afraid`, `traverse_window`, `traverse_climb`, `ui_*`...) |
 
 All of these extend `ContentDef` (`id`, `display_name`, `description`). The registry keys them
@@ -144,8 +146,9 @@ maths, schedules, memories and ability construction from data.
   `Ability` hooks beyond the source, or UI to show extra abilities.
 - **Animal behaviour beyond a den, a wander and a flee.** An `AnimalProfile` tunes how skittish, when it is about and what its
   blood is like; a new *kind* of behaviour (a predator, a flock) is code.
-- **Items, enemies, quests, dialogue trees, encounters, VFX definitions** - none of these systems
-  exist yet, so there is nothing to mod. (Sounds and feeding styles are moddable; screen effects, particles and
+- **Enemies beyond the one archetype, quests, items, dialogue trees, VFX definitions.** A `HunterProfile` tunes the hunter
+  (stats, senses, hours, blood, lines) and a location can place more of them, but a new *behaviour* (a ranged hunter, a pack) is code,
+  and the objective is one line with clues, not a quest system. There are no items, dialogue trees or VFX definitions. (Sounds and feeding styles are moddable; screen effects, particles and
   the transformation presentation are code.)
 - **UI.** The HUD, blood vessel, controls screen, pause menu and Blood Memory view are built in code
   (`scripts/ui/`); only the *content* of a memory (text, facts, style) is data. There is no theming data yet.
@@ -174,8 +177,9 @@ documented, versioned API; optional Steam Workshop packaging.
 | Content | `content/` |
 | Player (thin controller + components) | `scripts/player/` |
 | Abilities | `scripts/abilities/` |
+| Combat rules (damage, reach, a hunter's senses as arithmetic) | `scripts/combat/` |
 | Interaction | `scripts/interaction/` |
-| NPCs | `scripts/npc/` |
+| NPCs, animals, the hunter | `scripts/npc/` |
 | World (clock, atmosphere, builder, props) | `scripts/world/` |
 | UI | `scripts/ui/` |
 | Visuals | `scripts/visual/`, `shaders/` |

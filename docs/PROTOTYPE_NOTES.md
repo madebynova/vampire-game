@@ -1,4 +1,4 @@
-# Vampire prototype - design notes (Task 1 + Task 1.5 + Task 1.75 + Task 1.8)
+# Vampire prototype - design notes (Task 1 + Task 1.5 + Task 1.75 + Task 1.8 + v0.2.0 The Hunt)
 
 North-star question: **"Is being this vampire actually fun - does it feel like you became one?"** Task 1
 proved the systems work. Task 1.5 tried to make them create *decisions*. Task 1.75 is about **feel**: the
@@ -13,6 +13,10 @@ See the README. Quick reference (replace `godot` with the 4.8 binary):
 | `godot --headless --path . res://tests/smoke_test.tscn` | 72-check Task 1 playthrough |
 | `godot --headless --path . res://tests/scenario_tests.tscn` | 52-check Task 1.5 scenarios |
 | `godot --headless --path . res://tests/feel_tests.tscn` | 242-check Task 1.75 feel suite (real key / pad / held-button input) |
+| `godot --headless --path . res://tests/hunt_tests.tscn` | 242-check v0.2.0 suite: the hunter, Rend, escapes, the objective, the HUD readouts, the old systems around them (`-- only=...`) |
+| `godot --path . res://tests/hunt_playthrough.tscn -- <dir>` | the whole hunt played with real key events by a script, 33 checks, 17 screenshots |
+| `godot --path . res://tests/hunt_playtest.tscn -- <dir>` | scripted windowed photographs of the camp, the hunter, Sense, the ambush, the tell, the roof, the drink, the menus |
+| `godot --headless --path . res://tests/hunt_balance.tscn` | three simple 'players' fight the hunter and print how it went |
 | `godot --headless --path . res://tests/polish_tests.tscn` | 186-check Task 1.8 suite (traversal rules, blood number and rewards, movement, cape, fox, tidings, coffin, memories and clues; `-- only=...`) |
 | `godot --path . res://tests/polish_playtest.tscn -- <dir>` | scripted windowed walk through the Task 1.8 features with ~30 screenshots (`only=fox,...`) |
 | `godot --path . res://tests/model_probe.tscn -- <dir>` | the vampire model posed (idle, walk, run, jump, transformation, climb, feed) from the side and behind |
@@ -22,6 +26,158 @@ See the README. Quick reference (replace `godot` with the 4.8 binary):
 | `godot --headless --path . res://tests/sun_map.tscn -- 12` | ASCII shade map at 12:00 (hour arg optional) |
 | `godot --path . res://tests/time_probe.tscn -- <dir> 6,12,18,22` | screenshots of the yard by hour, Human vs Vampire |
 | `godot --path . res://tests/perf_probe.tscn` | frame time / draw calls in day, dusk, night, Sense on |
+
+## v0.2.0 - THE HUNT
+
+The Task 1.8 prototype had a strong vampire and nothing to point it at: people, a small world, and no loop that made you think
+*"I know what I want to do next"*. v0.2.0 gives the existing systems one thing to push against, and builds the smallest version of
+this loop (every arrow is something you do with a system that already existed):
+
+```
+find the threat -> Sense -> stalk -> choose how to engage -> use the vampire's moves + traversal -> deal with it -> feed / recover -> carry on
+```
+
+Not added, on purpose: an inventory, crafting, skill trees, a quest system, a second enemy type, other forms, a bigger map, saves.
+
+### Baseline (recorded before any change)
+Godot 4.8-dev6. `unit_tests` 288/288, `smoke_test` 72/72, `scenario_tests` 52/52, `polish_tests` 186/186, `feel_tests` 242/242 -
+**840 checks, 0 failures**. (Run in a *copy* of the repository, so work could go on while they ran; the same trick was used for every later full run.)
+
+### What was built
+
+**1. A reason to hunt - the objective** (`HuntDirector`, `HuntDefinition`, `HuntClue`). There is no quest log and no stored progress.
+One quiet line sits under the corner of the screen ("A lantern walks Blackthorn after dark. Find out who carries it.") and changes as the world
+changes: rumour -> sighted -> engaged -> wary -> down -> done (or *withdrawn*, if he has gone with the dawn). Which line shows is **worked out
+from the hunter's state** each quarter second, so it can never disagree with the world. Six *leads* are things the world already held, and the
+hunt just notices them: the three old clues (wax under the north window, the scratched gate lock, the watch log), what Elise says about a lantern
+behind the manor, and two new things to read at the hunter's camp. The line shows the latest ("Learned: ...") and "N of 6 leads".
+A new HUD toast says where when he comes out for the night ("A lantern kindles in the pines behind the manor").
+
+**2. One threat - the Lamplighter, Hollis Crane** (`Hunter`, `HunterProfile`, `HunterPlacement`). A wide-brimmed hat, a long coat, a lantern in his
+left hand and a silvered blade in the right (primitives, like everyone else; `HunterGear`). Everything numeric is data. He:
+- keeps a **camp** in the pines behind the manor (bedroll, crate, stakes, a hung lantern, two things to read; empty by day) and appears there at 7 PM;
+- walks a **round** of 16 points, lingering at some (the wax under the north window, the graveyard, the manor door, the well, the cottage), finding his
+  own way between them over a waypoint graph (`HuntNav`) that is linked automatically wherever a body can walk in a straight line - so he uses doorways and **cannot use a window or a roof**;
+- **perceives** you by a sight cone (58 degrees, 15 m, cut to 55% in the dark and restored by lamplight or his own lantern - `WorldLight`), by hearing (1.5 m if you
+  stand still, 4.5 m walking, 9.5 m running) and by feeling someone right behind him; awareness builds (a "?" and an amber bar), a stranger at his back is noticed late
+  or never, and a **Human is nothing to him** (only a vampire is hunted);
+- **hunts**: suspicious (turns, investigates), hunting (runs you down, 5.4 m/s against your 9), **searches** where he last saw you and goes back to his round, warier for 75 s;
+- **swings** a telegraphed blade: the blade goes up and the lantern flares for 0.55 s (tracking you for the first 60%, then committed), the blow lands only if you are still in reach,
+  26 damage, throws you back about a metre and staggers you for 0.3 s; you are then safe for 0.7 s; he needs 1.5 s between swings;
+- is **hurt**: 120 health; a plain Rend does not break a swing he has started (so trading blows is dangerous), a lunge / plunge / ambush does; 0 health puts him **down**, alive and helpless;
+- **withdraws at dawn** (5:00 if idle, 5:45 whatever he is doing), and mends 60% of his wounds when you sleep.
+
+**3. One attack - Rend** (`PlayerCombat`, key **R**, left mouse button, or **RB / R1**; Vampire only). A 0.56 s swing (0.11 s draw, 0.09 s strike, 0.36 s recovery), 20 damage,
+costs 1 blood and gives 2.5 back when it lands. Where it lands decides how it lands:
+
+| Strike | When | Damage (of his 120) |
+|---|---|---|
+| Rend | any | 20 |
+| Pounce (lunge) | struck at a run; carries you forward | 25 |
+| Plunge | struck while falling (off a roof) | 30 |
+| Ambush | he did not know you were there (on any of the above) | x3: 60 / 75 / 90 |
+
+Hunger weakens it (hungry x0.8, starving x0.6) and a Bloodrush strengthens it (+25% at full power, now said in the rush's own description). Soft aim turns you toward the nearest
+thing in front of the camera. One press in the last 0.2 s of a swing is remembered, so it never feels ignored, but it cannot be spammed. Hits have a freeze-frame, a FOV kick, camera shake,
+vibration, claw marks, a spray of blood, a floating number ("-60 AMBUSH") and a hit-marker; being hit has a thump, a red arc at the screen edge **pointing at who hit you**, a shove and a stagger.
+
+**4. The old systems, made to matter**
+
+| System | What it does in the hunt |
+|---|---|
+| Vampiric Sense | finds him through walls from 22 m (hunters mask their scent with lavender: Sense reaches 28 m for everyone else); says whether he **has noticed you** ("unaware of you" / "suspicious" / "hunting you"), shows his pulse (56 bpm calm, ~95 hunting) and the silhouette going pale gold -> amber -> hot red, and tells you when **his back is to you** |
+| Traversal | a **roof** is out of his reach (he stands at the foot of the wall, cannot strike, and gives up after 9 s); a **window** is not a door (he goes round - the test measures 11.5 m for a 2.8 m hop) and the vampire is **mist** while slipping through (nothing can hurt it); falling off a roof onto him is a plunge |
+| Darkness | the dark halves his eyes; lamps, the hall and his own lantern give you away; the crickets go quiet when he is near |
+| Transformation | turn **Human** in front of him and, after about two seconds, he is not sure what he saw and searches (at the price of the 1.25 s change, and of being nearly blind at night) |
+| Feeding | a person is worth 35-52 blood, a fox 26, **a downed hunter 62** with the longest, strongest rush (*Hunter's Rush*, x1.45 for 65 s) and a memory of his own; hunger makes you weaker in a fight, a blow tears you off a victim mid-feed, and a hurt vampire mends at 4 hp/s **for 0.5 blood per hp** (free in a Bloodrush) |
+| Blood Memory | the hunter's blood tells why he is here ("The Lamp Is Lit": an order sealed the gate from outside and sent him first; eight more lanterns wait); it agrees with the wax, the lock, the log and the lantern Elise sees |
+| Sunlight / day-night | he is about only from dusk to dawn, so the sky still ends every fight; nothing about the sun, the clock or the coffin changed |
+| Coffin | rest or death sends you home as before; he mends (60% after a rest, 25% after he killed you) and is wary |
+
+**5. Consequences, lightly.** Getting hurt matters (the vessel's ring, a **WOUNDED 74** line, the edges of the screen stay red below 45% health; mending costs blood). Dying to him
+(*THE HUNTER GOT YOU*) sends you to the coffin as the sun does - he keeps his wounds (he mends a quarter), is wary for 110 s and remembers. A fight is loud: awake people within 15 m
+grow uneasy, sleepers stir, anyone who can see it runs. **Leaving him alive costs you**: he comes back at the next dusk. Drinking him ends the hunt for good.
+
+**Readouts, in the game's own visual language.** The centre dot gains a thin ring that fills during a swing and flashes when Rend is ready (only when there is something to fight);
+four ticks when a blow lands (gold for an ambush / plunge); one word - "R  Ambush" - when an unaware hunter is within reach. Over his head, at a constant size on screen: a "?" or "!", a
+health bar (only when he is hurt or hunting), a thin amber awareness bar (only while he suspects you), his few words and the numbers coming off him. The camera slides over your right shoulder
+for the length of a fight so he is not hidden behind your own back. No panel, no menu.
+
+### Numbers
+| Value | Number | Why |
+|---|---|---|
+| Hunter health / damage / tell / recovery / gap | 120 / 26 / 0.55 s / 0.5 s / 0.45 s | four blows kill a full vampire, the tell is longer than a human reaction + a sprint out of his 2.45 m reach |
+| Rend damage / cost / taste | 20 / 1 / +2.5 | about six clean hits; a swing that lands pays for itself |
+| Sight / dark factor / hearing | 15 m / 55% / 1.5, 4.5, 9.5 m | a walker can reach his back; a runner from the dark still can (the pounce); lamplight undoes you |
+| Notice rate | 0.35 /s at the edge of sight to 2.2 /s point-blank; 0.9 /s by sound | ~0.5 s point-blank, ~3 s at the edge |
+| Knock-back / stagger / grace | 9 m/s (~1 m) / 0.3 s / 0.7 s | a hit is felt, a stunlock is impossible |
+| Hours | out 7 PM, retire 5 AM (dawn 5:45) | a night is ~8 real minutes |
+| Hunter's blood | 62 blood, rush x1.45 for 65 s | the richest drink in the estate, because you earned it |
+| Sunlight, day length, blood drain, Sense cost | unchanged | `unit_tests` still pin them |
+
+**A bot's view of the balance** (`tests/hunt_balance.gd`; the hunter's AI, Rend, damage and knock-back are the real ones, the human is a script): mashing Rend in front of him wins in 4.0 s and
+costs ~63 health (three blows taken); hitting, then backing out of reach as the blade rises and coming in on his recovery wins in ~10 s for no damage; an ambush from behind then the same finishes
+in 3.7 s for no damage. That is *dangerous if you brawl, easy if you play the game*. It says nothing about reaction times, nerves or a controller.
+
+### Architecture (small and local)
+- **Data**: `HunterProfile`, `HunterPlacement` (a camp and a round), `HuntDefinition`, `HuntClue`; `LocationData.hunters` + `LocationData.nav_points`; `FormData.strike_damage`; a `hunter` `FeedStyle` and `BloodDefinition`.
+- **Rules as arithmetic**: `CombatRules` (strike damage, reach, hearing, sight, noticing) and `HitInfo` - no nodes, unit-testable.
+- **Player**: `PlayerCombat` (a component like the others), a new `PlayerState.Mode.STAGGERED`, `Player.push()` (a shove that does not fight the stick), `FeedingController.break_off()`, `CameraRig.shoulder`, `HumanoidModel` hand slots / `arm_pose` / `strike_pose`.
+- **World**: `Hunter` (`extends FeedSource`, so feeding needed no special case), `HunterGear`, `HuntNav`, `WorldLight`, `HuntDirector`; the camp is built by `WorldBuilder`.
+- **UI**: `CombatHud` (ring, hit-marks, hurt arcs, the one-word hint), the objective block in `Hud`, a wound vignette in `ScreenFX`.
+- **Audio**: eleven procedural sounds in `SfxSynth` (a boot, a lantern, a hum, a stab, a drawn blade, a swing, a grunt, a fall, claws, flesh, a blow taken).
+- **Nothing in the old systems was rewritten.** Edits to existing files are additions (a new mode, a new action, a new row in the controls screen, a new hook in the coffin, `perceive_vampiric_act` reused for fight noise).
+  Hunters follow `Hunter.enabled` / `HumanNpc.schedules_enabled` (the flag older suites already use to freeze routines), so **no existing check was edited**.
+
+### How to run what is new
+| Command | What |
+|---|---|
+| `godot --headless --path . res://tests/hunt_tests.tscn` | the v0.2.0 suite (242 checks, ~2.5 min); `-- only=rules,data,nav,strike,senses,combat,escape,down,objective,hours,consequence,hud,regress` |
+| `godot --path . res://tests/hunt_playthrough.tscn -- <dir>` | **the whole loop played with real key events** by a script (33 checks, ~70 s) with 17 screenshots |
+| `godot --path . res://tests/hunt_playtest.tscn -- <dir>` | the camera crew: the camp, the hunter from four sides, Sense, the ambush, the tell, the roof, the drink, the menus (`only=camp,model,...`) |
+| `godot --headless --path . res://tests/hunt_balance.tscn` | the three-policy fight above |
+
+### What the new suite checks
+**rules** (damage, hunger, reach, senses as pure arithmetic), **data** (everything is content; the new input action on a key, the mouse and a bumper; eleven sounds), **nav** (the graph links, every waypoint is standable,
+his whole round is walkable, a window is not a door, a roof is unreachable), **strike** (cost, cooldown, buffer, ambush / lunge / plunge, hunger, Bloodrush, reach, cone, walls, down), **senses** (cone, light, dark, behind,
+walking vs running, Human, walls, mist, what Sense says), **combat** (tell before damage, stagger, knock-back, grace, dodge, the opening after a miss, interrupts, swing spacing, mist, torn off a victim, dying to him), **escape**
+(roof, window, losing him, turning human), **down** (prompt, worth, early release, drinking, memory, rush, left alive), **objective** (every stage and every lead), **hours**, **consequence**, **hud**, **regress** (Sense, feeding, change, coffin).
+
+### Playtest notes
+**What was and was not done.** Besides the suites, I ran the game windowed in the real renderer and photographed it (`hunt_playtest`, 27 shots) and had a script play the loop start to finish with real key events and the real AI
+(`hunt_playthrough`: wake, a clue by day, become a vampire, Sense, find him, shadow him, ambush, take a blow, run for the wall and climb, wait on the roof, drop on him, finish him, drink, the hunt is over, talk to Tomas, sleep). I
+**did not play by hand**, **did not hold a controller**, and **cannot hear** the procedural audio (I checked only that every new sound exists and has sensible levels). The balance figures come from a bot. Everything here is "reads right in stills and in numbers", not "feels right in the hands".
+
+**Things looking at it changed** (none were caught by the automated checks):
+1. In melee the third-person camera put **your own back in front of him**, hiding the very blade you must dodge. The camera now slides over your right shoulder for the length of a fight.
+2. The first version of the floating readout was a metre-wide bar: it filled the screen at 2 m and was a speck at 25 m. It is now a constant size on screen, like Sense's labels.
+3. A knock-back of 6 m/s moved you 0.47 m, which is a flinch, not a blow: 9 m/s.
+4. With the player on a roof edge the hunter walked *into the building* to stand under them; he now goes to the farthest point he can walk to toward you - the foot of the wall.
+5. The Bloodrush's description did not say it makes Rend hit harder (and the number it gave was invisible): added to the rush's own text, without touching the existing description that a test pins.
+6. Three sounds (the drawn blade, the grunt, the "hm?") were quiet next to the rest; raised. The windup is the thing you listen for.
+
+### Known issues / limits
+- Not hand-played, no controller, no ears (above). Balance is from a bot. Tell timing is the number most worth feeling.
+- One hunter. His memory promises eight more lanterns; nothing follows them yet. After you drink him the estate is as empty as it was in 1.8.
+- Inside rooms he steers in a straight line: furniture can snag him (he hops after about three seconds, as the villagers do).
+- When he loses you he searches the last place he saw you and no more (no scent, no tracks).
+- A plain Rend does not interrupt a swing he has begun. That is the design (trade blows and he hits you too), but it may feel unresponsive; the cure is the pounce / ambush / plunge.
+- The shoulder camera is right-shoulder only and, in the narrow strip behind the manor, the spring arm can still be squeezed by the wall.
+- Slipping out of a window buys 2-3 seconds, not a getaway; a roof is the real escape and he gives up there after 9 s.
+- Villagers do not react to the hunter, and the hunter ignores villagers.
+
+### Design questions raised by this pass
+1. Is 26 damage / 120 health / a 0.55 s tell right? (Mash costs ~63 hp; a hungry brawler dies.)
+2. Should a downed hunter be *finished* with Rend as well as drunk? Today the only ways to end him are the drink (he dies) or leaving him (he returns).
+3. Should he come back stronger - or should the Order send the next lantern (the memory says eight)?
+4. Should turning Human work as a disguise at all, or only before he has seen the change?
+5. Should Rend cost blood on a miss only? (Today: 1 per swing, +2.5 when it lands.)
+6. Should the villagers fear the lamplighter (and the hunter hunt them)? Should Tomas / Elise / Corvin talk about him once you have met him?
+7. Should the objective also live somewhere you can re-read it (the pause menu, a journal)?
+8. Is the shoulder camera right for a pad, or should it follow the target?
+9. Is "R / left click" the right keyboard binding, given the same click re-captures the mouse after alt-tab?
+
+---
 
 ## Task 1.8 - vampire world & traversal polish
 

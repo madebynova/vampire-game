@@ -55,6 +55,11 @@ The player's **settings and saves are never touched**, see "Saves" below.
 
 ## Publishing the first Windows release (0.1.0)
 
+> Later releases follow the same five steps with the new `VERSION` and its own notes file. **0.2.0 (THE HUNT)** was published this way:
+> `VERSION` = `0.2.0`, `./tools/sync_version.ps1`, `build_windows.ps1`, `test_exported_build.ps1` (now six suites, including `hunt_tests`),
+> `package_release.ps1 -Publish -NotesFile docs/release_notes/v0.2.0.md`. The website's download button still names the v0.1.0 asset
+> until someone changes that one link (see the README, *Website*).
+
 Prerequisite: Godot 4.8 with the matching **export templates** (see the README, "Windows build"). They are installed on the
 development machine and the build has been exported and run for real; on a new machine install them once first.
 

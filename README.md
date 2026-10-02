@@ -8,15 +8,30 @@ This repository is a **prototype**, not the game. Its purpose is to answer one q
 small on purpose and are meant to create decisions where they meet - sunlight vs. feeding vs. time of
 day vs. what you are (Human or Vampire) - rather than to pile up features.
 
-## Current status: Task 1.8 (vampire world & traversal polish)
+## Current status: v0.2.0 - THE HUNT
 
-Task 1 made the loop work, Task 1.5 made it interact (day/night, sun, routines, modding foundation), Task 1.75 made it
-*feel* like something. Task 1.8 makes the small world **reliable and purposeful**: traversal you can trust (it only ever
-happens on purpose, and only the way you meant), controls that grip, a number on the blood and rewards that explain
-themselves, a second thing to drink, people who tell you things, a coffin that asks when you will wake, and more to find.
-Nothing big was added; the fox is the largest new system.
+Task 1 made the loop work, 1.5 made it interact (day/night, sun, routines), 1.75 made it *feel* like something, 1.8 made the small world
+reliable. They left one problem: **there was not enough to do.** v0.2.0 gives the vampire something to push against - the first real loop:
+
+```
+find a threat -> Sense -> stalk -> choose how to engage -> use the vampire's moves + traversal -> deal with it -> feed / recover -> carry on
+```
+
+A hunter walks Blackthorn by lantern after dark. He keeps a camp in the pines, sees you by a cone (further in lamplight), hears you by how fast you move,
+and, once he has noticed you, runs you down and swings a blade you can see coming. You have one attack, **Rend**, that hits harder at a run, from above,
+and on someone who has not seen you. Sense tells you whether he has noticed you and which way he faces; a roof is out of his reach and a window is not a
+door; turning Human makes him doubt what he saw; the dawn drives him off. Put him down and you can drink him: the richest blood in the estate and a memory
+of his own. Leave him and he comes back. The objective is one quiet line under the corner of the screen that reads the world. No inventory, no skill
+tree, no second enemy, no quest log - the account and the numbers are in [`docs/PROTOTYPE_NOTES.md`](docs/PROTOTYPE_NOTES.md).
+
+Task 1.8 (kept below) had made traversal reliable, added the blood number and readable rewards, foxes, what people tell you, and the coffin's choices.
 
 ### Playable today
+- **The hunt (new).** A vampire hunter with a camp, a round, a lantern and a silver blade; an objective that reads the world; **Rend** (R / left mouse / RB), the
+  vampire's one attack - a plain strike, a pounce at a run, a plunge from above, and a tripled **ambush** on someone who has not seen you; a telegraphed blade you can
+  dodge; wounds that cost blood to mend; Sense that reads his mind (has he noticed you? is his back turned?); roofs and the dark that break a chase; a downed hunter
+  you can drink (62 blood, a long strong Bloodrush, his own memory) or leave to return. Readouts are small and in the game's own style: a ring on the centre dot, hit marks,
+  a red arc toward whoever struck you, a bar and a "!" over his head.
 - **Human <-> Vampire** with a real transformation: the world tightens into a red-black tunnel, the body
   rises and arches, time stutters, a shockwave and chromatic tear mark the change, the night suddenly
   opens around you. Going back is quieter: a long exhale, warmth, the cloak turning to ash.
@@ -66,6 +81,7 @@ Nothing big was added; the fox is the largest new system.
 | Jump | Space | A | Cross |
 | Talk, dig, read, sleep, **slip through windows, climb** | E | X | Square |
 | **Feed** (Vampire, hold) | E | X | Square |
+| **Rend** (Vampire: strike; hit harder at a run, from above, or unseen) | R / left mouse button | RB | R1 |
 | Transform Human <-> Vampire | F | Y | Triangle |
 | Vampiric Sense (Vampire, toggle) | Q | LB (R3 also works) | L1 (R3) |
 | Continue a Blood Memory | E / Space / Enter / click | A, B or X | Cross / Circle / Square |
@@ -92,7 +108,7 @@ The HUD shows a normal 12-hour clock: midnight is 12:00 AM, noon is 12:00 PM, 17
 display only - the simulation, schedules and tests still run on 24-hour game time.
 
 ### Not implemented (on purpose)
-Wolf/Bat forms, combat, quests, inventory, crafting, skill trees, full blood-type system, turning people,
+Wolf/Bat forms, more than one enemy and one attack (v0.2.0 has a single hunter archetype and Rend), quests beyond the one hunt (a line of text, not a log), inventory, crafting, skill trees, full blood-type system, turning people,
 lineage, a large world, save games, final art/UI/audio, multiplayer, a mod manager. See
 [`docs/PROTOTYPE_NOTES.md`](docs/PROTOTYPE_NOTES.md) for known issues and open design questions.
 
@@ -111,7 +127,7 @@ The project exports to a single `VampireGame.exe` (Windows 10/11, 64-bit; the da
    (for 4.8-dev6 they go to `%APPDATA%\Godot\export_templates\4.8.dev6\`).
 2. `./tools/build_windows.ps1 -Godot "<path to your Godot 4.8 console exe>"` writes `build/windows/VampireGame.exe`
    (git-ignored; binaries are published as GitHub Releases, never committed). It checks the templates first and says what is missing.
-3. `./tools/test_exported_build.ps1 -Godot "<same exe>"` runs all five test suites (about 840 checks) **inside an exported
+3. `./tools/test_exported_build.ps1 -Godot "<same exe>"` runs all six test suites (about 1,080 checks) **inside an exported
    build** instead of the editor (about 15 minutes). It works on a temporary copy of the project and an isolated `%APPDATA%`.
    One known limitation: 4 example-mod checks cannot run in an export (the test copies `res://` files) and are skipped explicitly.
 4. `./tools/package_release.ps1` makes `dist/VampireGame-Windows-v<VERSION>.zip` + `.sha256`; see [`docs/RELEASING.md`](docs/RELEASING.md).
@@ -143,7 +159,7 @@ supabase/  the feedback database schema (Row Level Security)
 |---|---|
 | Website, feedback forms, community list | built and tested (against a stand-in server); **not deployed** |
 | Feedback database | schema written; **no Supabase project exists yet**, so the site shows "feedback temporarily unavailable" |
-| Windows game | **released as v0.1.0** (GitHub Release); exported, tested inside the exported build, and run by hand |
+| Windows game | v0.1.0 released; **v0.2.0 (THE HUNT)** is the current version (see `docs/release_notes/v0.2.0.md`); exported, tested inside the exported build, and run by hand |
 | Launcher (`launcher/`) | logic + window built, 26 tests pass, accepts the real v0.1.0 zip; **paused: no launcher `.exe` built** |
 | Release tooling (`tools/package_release.ps1`) | used for the real v0.1.0 release |
 | Browser build | **not started** |
@@ -213,6 +229,9 @@ All are headless-capable (`godot --headless --path . <scene>`); replace `godot` 
 | `res://tests/scenario_tests.tscn` | Task 1.5 scenarios: routines, sleepers, memory variants, trust, witnesses, tiered Sense, embers, night vs day |
 | `res://tests/feel_tests.tscn` | Task 1.75: transformation presentation, blood and Bloodrush, feeding per victim state, witnesses, the Blood Memory view and its input rules (held keys, pad, mouse), Sense, every traversal route both ways (and blocked exits), pause and menus, controller-only play, HUD and controls screen, coffin, the cleaned-up world |
 | `res://tests/polish_tests.tscn` | Task 1.8: traversal that only happens on purpose (direction, level, side, facing, blocked landings, the broken roof), the blood number and what a Bloodrush says, controller movement and bindings, the cape through running / jumping / transforming, the fox (data, behaviour, Sense, feeding, witnesses), what people tell you, the coffin's choices, the extra memories and clues (`-- only=traversal,fox,...` runs sections) |
+| `res://tests/hunt_tests.tscn` | v0.2.0 (242 checks): the combat arithmetic, the hunter as data, the waypoint graph (doors yes, windows no, roofs no), Rend (cost, cooldown, buffer, ambush / pounce / plunge, hunger, Bloodrush, reach, walls, down), what he sees / hears / feels (cone, lamplight, the dark, behind, walking vs running, Human, walls, mist), his blade (tell, stagger, knock-back, grace, dodge, interrupts, dying to him), escapes (roof, window, losing him, turning Human), drinking him, the objective stage by stage, his hours, consequences, the HUD readouts, and the old systems around it (`-- only=rules,nav,strike,...`) |
+| `res://tests/hunt_playthrough.tscn` | **the whole hunt played with real key events** by a script: wake, a clue, become a vampire, Sense, find, stalk, ambush, take a blow, climb, drop on him, finish, drink, carry on (33 checks, 17 screenshots when windowed) |
+| `res://tests/hunt_playtest.tscn` / `hunt_balance.tscn` | dev tools: photographs of each beat (27 shots); a three-policy fight with the numbers printed |
 
 Windowed runs accept a screenshot directory: `godot --path . res://tests/feel_tests.tscn -- <dir>`.
 Dev tools: `playtest_driver.tscn` (a scripted walk through the playtest sequence with screenshots), `polish_playtest.tscn` (the same for

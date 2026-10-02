@@ -1,5 +1,43 @@
 # Changelog
 
+## v0.2.0 - THE HUNT
+
+### Why
+The prototype had a strong vampire and nothing to do with it. v0.2.0 builds the smallest version of one real gameplay loop - find a threat,
+use Sense, stalk it, choose how to engage, use the vampire's movement, deal with it, feed and recover, carry on - out of the systems that
+already existed. See [`docs/PROTOTYPE_NOTES.md`](docs/PROTOTYPE_NOTES.md) (v0.2.0 first) for the full account, numbers and open questions.
+
+### Added
+- **An objective that reads the world** (`HuntDirector`, `HuntDefinition`, `HuntClue`): one line under the corner of the screen
+  (rumour -> sighted -> engaged -> wary -> down -> done / withdrawn), derived from the hunter's state, with six leads the world already held
+  (the wax, the gate lock, the watch log, Elise's lantern, and two new things to read at the hunter's camp).
+- **A threat: the Lamplighter, Hollis Crane** (`Hunter`, `HunterProfile`, `HunterPlacement`, `HunterGear`): a camp in the pines and a round of sixteen points
+  from dusk to dawn; sees by a cone (further in lamplight, less in the dark), hears by how fast you move, feels you at his back; suspicious -> hunting -> searching ->
+  back to his round; a telegraphed blade (0.55 s tell, 26 damage, knock-back, stagger); 120 health; goes down alive; withdraws at dawn; walks over a waypoint graph
+  (`HuntNav`) so he uses doorways and cannot use windows or roofs.
+- **One attack: Rend** (`PlayerCombat`; R / left mouse / RB-R1): 20 damage, 0.56 s, costs 1 blood and gives 2.5 back; a pounce at a run (25), a plunge when falling (30), an
+  ambush on someone who did not know you were there (x3); weaker when hungry, stronger in a Bloodrush; soft aim; remembers one press at the end of a swing; freeze-frame, FOV kick,
+  claw marks, blood, floating numbers, vibration. A new `PlayerState.Mode.STAGGERED`, `Player.push()`, `FeedingController.break_off()`.
+- **Readouts**: a strike ring on the centre dot, hit marks, red arcs pointing at who hit you, "R  Ambush" when an unaware hunter is in reach, "WOUNDED 74", a persistent red edge below 45%
+  health, an over-the-shoulder camera for the length of a fight; over the hunter (constant screen size) a "?" / "!", a health bar, an awareness bar, his few words, and the damage.
+- **Sense reads the hunter** (22 m): whether he has noticed you, his pulse, a silhouette that goes gold -> amber -> red, and "his back is to you".
+- **A downed hunter can be drunk**: the richest blood in the estate (62, *Hunter's Rush* x1.45 for 65 s) and his own memory, "The Lamp Is Lit". Leave him alive and he is back at dusk.
+- **Content**: `content/hunters/lamplighter.tres`, `content/hunts/lantern_in_the_manor.tres`, a `hunter` feed style and blood type, a hunter placement and 31 waypoints in `blackthorn.tres`, a camp.
+- **Eleven procedural sounds**: boots, a lantern, a "hm?", a stab when he sees you, a blade drawn, a swing, a grunt, a fall, claws, flesh, a blow taken.
+- **The night holds its breath**: the crickets go quiet when the hunter is near.
+- Tests: `hunt_tests` (242 checks), `hunt_playthrough` (33 checks, real key events), `hunt_playtest` (27 photographs), `hunt_balance`; all five older suites unchanged.
+
+### Changed
+- The Bloodrush's own description now says it makes Rend hit harder (the pinned wording of the existing description is untouched).
+- The controls screen lists Rend; the HUD has a Rend chip; the death banner says who killed you (*THE HUNTER GOT YOU* / *THE SUN TOOK YOU*).
+- `NightLight` and the interior lights register with `WorldLight` so something can ask how brightly lit a spot is.
+- The coffin tells hunters that you rested or died (`player_rested`).
+- Version 0.2.0 (`VERSION`, `export_presets.cfg`, `project.godot`). `tools/test_exported_build.ps1` also runs `hunt_tests`.
+- The Godot editor re-saved `scenes/main.tscn` with scene and script UIDs (committed separately; no behaviour change).
+
+### Not changed
+Sunlight, day length, blood drain, Sense cost, the transformation, the people, the foxes, traversal rules and every existing check.
+
 ## Task 1.8 - Vampire world & traversal polish
 
 ### Why
