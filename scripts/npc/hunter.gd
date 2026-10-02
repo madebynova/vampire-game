@@ -105,6 +105,7 @@ var _search_t := 0.0
 var _lost_t := 0.0
 var _unreach_t := 0.0
 var _human_t := 0.0
+var _saw_climb := false
 var _stuck_t := 0.0
 var _stuck_ref := Vector3.ZERO
 var _stuck_n := 0
@@ -554,6 +555,7 @@ func _spot() -> void:
 	_lost_t = 0.0
 	_unreach_t = 0.0
 	_human_t = 0.0
+	_saw_climb = false
 	_repath_t = 0.0
 	last_known = _player.global_position if _player != null else global_position
 	swing = Swing.NONE
@@ -756,6 +758,7 @@ func _hunting(delta: float) -> void:
 	if _seen_now or (_los and flat < 4.0):
 		_lost_t = 0.0
 		last_known = _player.global_position
+		_saw_climb = to.y >= 1.6
 	else:
 		_lost_t += delta
 	# You turned into a person: for a moment he is not sure what he saw.
@@ -766,7 +769,8 @@ func _hunting(delta: float) -> void:
 			return
 	else:
 		_human_t = 0.0
-	if _lost_t > 3.0:
+	# (He does not lose someone he watched go up a wall and who is still up there: he waits at the foot of it.)
+	if _lost_t > 3.0 and not (_saw_climb and to.y >= 1.6):
 		_say(profile.lines_lost, 2.0)
 		_begin_search(last_known)
 		return
@@ -801,7 +805,8 @@ func _hunting(delta: float) -> void:
 
 ## You are somewhere he cannot climb to. He goes to the foot of it and glares up, then gives up.
 func _stand_under(to: Vector3, flat: float, delta: float) -> void:
-	_unreach_t += delta
+	# He is patient at the foot of the wall; on the way there (it may be the long way round) the clock barely runs.
+	_unreach_t += delta if flat <= 3.5 else delta * 0.25
 	_turn_toward(to, delta, 6.0)
 	if flat > 2.6:
 		_repath_t -= delta

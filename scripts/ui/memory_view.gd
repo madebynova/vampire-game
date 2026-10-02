@@ -17,6 +17,12 @@ extends CanvasLayer
 signal opened
 signal closed
 
+## Where the telling sits: its region starts this far down the screen (fraction), with this margin at the bottom.
+const REGION_TOP := 0.3
+const BOTTOM_MARGIN := 26.0
+const SCREEN_MARGIN := 18.0
+const BODY_SIZE := 21
+
 ## The intro plays this long before the text begins to be told.
 @export var intro_time := 2.4
 ## Nothing can dismiss it before this many seconds (the intro).
@@ -58,6 +64,8 @@ var _title: Label
 var _body: Label
 var _facts: VBoxContainer
 var _reward: Label
+var _center: CenterContainer
+var _fit_frames := 0
 var _meta: Label
 var _prompt_row: HBoxContainer
 var _prompt_label: Label
@@ -114,17 +122,17 @@ func _build() -> void:
 	_dust.emitting = false
 	_root.add_child(_dust)
 
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.anchor_top = 0.3
-	center.offset_bottom = -26
-	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.add_child(center)
+	_center = CenterContainer.new()
+	_center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_center.anchor_top = REGION_TOP
+	_center.offset_bottom = -BOTTOM_MARGIN
+	_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_center)
 
 	_column = VBoxContainer.new()
 	_column.custom_minimum_size = Vector2(760, 0)
 	_column.add_theme_constant_override(&"separation", 8)
-	center.add_child(_column)
+	_center.add_child(_column)
 
 	_kicker = UiStyle.label("BLOOD MEMORY", 15, UiStyle.BLOOD_BRIGHT)
 	_kicker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -138,7 +146,7 @@ func _build() -> void:
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_column.add_child(_title)
-	_body = UiStyle.label("", 21, Color(0.98, 0.94, 0.9), true, 5)
+	_body = UiStyle.label("", BODY_SIZE, Color(0.98, 0.94, 0.9), true, 5)
 	_body.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_body.custom_minimum_size = Vector2(740, 0)
@@ -214,6 +222,7 @@ func present(p: Player, feed_result: Dictionary) -> void:
 	_skip_lock = 0.0
 	_beat_t = 0.5
 	_fill_text()
+	_fit_frames = 12   # the layout settles over a few frames; fit_to_screen() then makes a long memory fit
 	_root.visible = true
 	_root.modulate.a = 0.0
 	for n in [_kicker, _frame, _title, _body, _facts, _reward, _meta, _prompt_row]:
@@ -273,6 +282,41 @@ func force_close() -> void:
 
 # ---------------------------------------------------------------- build the text
 
+## A long memory must not push its reward line and its "Continue" off the bottom of the screen. The body is told a
+## few words at a time and a Label only reserves room for the words shown so far, so the full height of the body is
+## worked out from the font. If the whole column fits the usual place (the lower seven tenths of the screen) nothing
+## changes. If not, it takes the whole screen, the body is held at its full height (so nothing drifts as the telling
+## goes on) and the column is scaled down to fit.
+## Returns the height the column then takes on screen. `screen_height` overrides the viewport's (tests: the headless
+## viewport is not the 720 px a player has).
+func fit_to_screen(screen_height := 0.0) -> float:
+	var vp_h := screen_height if screen_height > 0.0 else get_viewport().get_visible_rect().size.y
+	var font := _body.get_theme_font(&"font")
+	var font_size := _body.get_theme_font_size(&"font_size")
+	var wrapped := font.get_multiline_string_size(_body.text, HORIZONTAL_ALIGNMENT_CENTER, _body.custom_minimum_size.x, font_size)
+	var lines := maxi(roundi(wrapped.y / font.get_height(font_size)), 1)
+	var body_full := wrapped.y + (lines - 1) * _body.get_theme_constant(&"line_spacing")
+	_body.custom_minimum_size.y = 0.0
+	var column_full := _column.get_combined_minimum_size().y - _body.get_combined_minimum_size().y + body_full
+	if column_full <= vp_h * (1.0 - REGION_TOP) - BOTTOM_MARGIN:
+		_center.anchor_top = REGION_TOP
+		_center.offset_bottom = -BOTTOM_MARGIN
+		_column.scale = Vector2.ONE
+		return column_full
+	_center.anchor_top = 0.0
+	_center.offset_bottom = 0.0
+	_body.custom_minimum_size.y = body_full
+	var fit := minf(1.0, (vp_h - 2.0 * SCREEN_MARGIN) / column_full)
+	_column.pivot_offset = Vector2(_column.custom_minimum_size.x * 0.5, column_full * 0.5)
+	_column.scale = Vector2(fit, fit)
+	return column_full * fit
+
+
+## How much of the screen the column needs (tests): the fraction of the height its content takes.
+func content_fraction() -> float:
+	return _column.get_combined_minimum_size().y / get_viewport().get_visible_rect().size.y
+
+
 func _fill_text() -> void:
 	_title.text = str(result.get("title", "A Memory"))
 	_frame.text = style.memory_frame
@@ -316,6 +360,9 @@ func _process(delta: float) -> void:
 	if not _open:
 		return
 	_age += delta
+	if _fit_frames > 0:
+		_fit_frames -= 1
+		fit_to_screen()
 	_skip_lock = maxf(_skip_lock - delta, 0.0)
 	# The release gate: the input that started this (the held feed key) must be let go first.
 	if not _any_dismiss_held():
